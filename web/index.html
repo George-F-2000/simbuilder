@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimBuilder — Scenario &amp; Vehicle → MotionSolve</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>SimBuilder</h1>
+    <span class="sub">Scenario &amp; vehicle &rarr; MotionSolve</span>
+  </div>
+  <nav id="tabs">
+    <button class="tab active" data-tab="vehicle">Vehicle Builder</button>
+    <button class="tab" data-tab="motor">Motor Builder</button>
+    <button class="tab" data-tab="scenario">Scenario Builder</button>
+  </nav>
+  <div class="header-actions">
+    <button id="btnOpenViewer" class="ghost hidden" title="Open the MF4 viewer">MF4 Viewer</button>
+    <button id="btnOpenPlt" class="ghost hidden" title="Open the PLT → MF4 converter">PLT → MF4</button>
+    <span id="toolsSep" class="tools-sep hidden"></span>
+    <button id="btnExample" class="ghost" title="Reset to the AVL tip-out/tip-in example">Load example</button>
+    <button id="btnSaveJson" class="ghost" title="Save scenario definition as JSON">Save scenario</button>
+    <button id="btnLoadJson" class="ghost" title="Load a scenario JSON">Open scenario</button>
+    <input type="file" id="fileJson" accept=".json" hidden>
+  </div>
+</header>
+
+<main id="tab-scenario">
+  <!-- ============ LEFT: scenario definition ============ -->
+  <section id="left">
+    <div class="card" id="presetCard">
+      <h2>Preset maneuvers <span class="hint">one click: 0→50 kph at X% pedal · coast to 20 · X% for 5 s</span></h2>
+      <div id="presetChips"></div>
+    </div>
+
+    <div class="card" id="scenarioCard">
+      <h2>Scenario</h2>
+      <div class="row">
+        <label>Name
+          <input type="text" id="scName" spellcheck="false">
+        </label>
+        <label>Start speed (kph)
+          <input type="number" id="scStartSpeed" min="0" step="1">
+        </label>
+      </div>
+      <details>
+        <summary>Solver &amp; driver settings</summary>
+        <div class="hmax-slider-row">
+          <label class="slider-label">Solver time step <span class="badge sim">⚡ affects sim</span>
+            <input type="range" id="scHmaxSlider" min="0" max="100" step="1"
+              title="Maximum integration step (h_max) written into every maneuver. Smaller = more accurate and slower; larger = faster and coarser. Estimate calibrated from this model's measured solve speed.">
+          </label>
+          <div class="slider-scale">
+            <span>0.01 s — finest needed</span>
+            <span id="hmaxReadout" class="hmax-readout"></span>
+            <span>0.1 s — fastest &amp; coarse</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Max step h<sub>max</sub> (s)
+            <input type="number" id="scHmax" step="0.005" min="0.01">
+          </label>
+          <label>Print interval (s)
+            <input type="number" id="scPrint" step="0.001" min="0.001">
+          </label>
+        </div>
+        <div class="row">
+          <label>Pedal smoothing (Hz)
+            <input type="number" id="scSmooth" step="1" min="1">
+          </label>
+          <label>Engine init speed
+            <input type="number" id="scEngInit" step="10" min="0">
+          </label>
+        </div>
+      </details>
+      <details>
+        <summary>Preview vehicle model (estimate only)</summary>
+        <label class="apply-check"><input type="checkbox" id="pmInherit">
+          Inherit mass, CdA &amp; tractive force from Vehicle Builder
+          (<span id="pmInheritName">—</span>)</label>
+        <div class="row">
+          <label>Mass (kg)
+            <input type="number" id="pmMass" step="50" min="100">
+          </label>
+          <label>Max tractive force (N)
+            <input type="number" id="pmFmax" step="250" min="500">
+          </label>
+        </div>
+        <div class="row">
+          <label>Max brake force (N)
+            <input type="number" id="pmFbrk" step="500" min="500">
+          </label>
+          <label>CdA (m&sup2;)
+            <input type="number" id="pmCdA" step="0.05" min="0">
+          </label>
+        </div>
+        <div class="row">
+          <label>Rolling resistance coeff.
+            <input type="number" id="pmCrr" step="0.001" min="0">
+          </label>
+          <label>&nbsp;<span class="hint">Used only for the speed preview,<br>never written to the .adf</span></label>
+        </div>
+      </details>
+    </div>
+
+    <div id="phaseList"></div>
+
+    <button id="btnAddPhase" class="add-phase">+ Add phase</button>
+
+    <!-- Pipeline setup: which vehicle runs and where files go. Only shown
+         when hosted by the pipeline app (pywebview). -->
+    <div class="card hidden" id="setupCard">
+      <h2>Pipeline setup <span class="hint">(what runs, and where)</span></h2>
+
+      <p class="hint">Every run = <b>chassis template</b> (multibody skeleton
+      from MotionView: suspension, steering, body geometry)
+      + <b>your Vehicle Builder car</b> (motors, gearing, mass, tires — applied
+      on top) + <b>your Scenario Builder maneuver</b> (replaces whatever
+      maneuver the template was exported with — its file name is historical
+      and means nothing).</p>
+      <div class="setup-row">
+        <span class="setup-label">Chassis template<br>(from MotionView)</span>
+        <code id="setupDeck" class="setup-path"></code>
+        <button id="btnPickDeck" class="ghost">Change…</button>
+      </div>
+      <div id="setupDeckInfo" class="setup-info"></div>
+
+      <div class="setup-row">
+        <span class="setup-label">Runs saved to</span>
+        <code id="setupRuns" class="setup-path"></code>
+        <button id="btnPickRuns" class="ghost">Change…</button>
+        <button id="btnOpenRuns" class="ghost">Open</button>
+      </div>
+
+      <div class="setup-row">
+        <span class="setup-label">Solver</span>
+        <code id="setupMS" class="setup-path"></code>
+      </div>
+
+      <p class="hint">Each run creates a fresh folder
+      <b>&lt;scenario&gt;_&lt;timestamp&gt;</b> in the runs folder holding
+      <i>everything</i>: the copied model deck, your .adf scenario, all
+      solver outputs (.plt, .log, …) and the converted
+      <b>_avldrive.mf4</b> — which is converted and opened in the MF4
+      Viewer automatically when the solver finishes.</p>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT: preview + output ============ -->
+  <section id="right">
+    <div class="card">
+      <h2>Preview <span class="hint">(point-mass estimate — real answer comes from MotionSolve)</span></h2>
+      <canvas id="pedalPlot" height="180"></canvas>
+      <canvas id="speedPlot" height="220"></canvas>
+      <div id="warnings"></div>
+    </div>
+    <div class="card">
+      <div class="adf-head">
+        <h2>.adf output</h2>
+        <div>
+          <span id="runVehChip" class="veh-chip hidden" title="The run uses the vehicle defined in the Vehicle Builder tab: generated motor files, drive ratios, mass patch, tire and voltage overrides"></span>
+          <button id="btnCopy" class="ghost">Copy</button>
+          <button id="btnDownload">Download .adf</button>
+          <button id="btnRun" class="run-ms hidden" title="Run this scenario through MotionSolve with the Vehicle Builder vehicle, convert to MF4 and open the viewer">&#9654; RUN IN MOTIONSOLVE</button>
+        </div>
+      </div>
+      <pre id="adfOut"></pre>
+    </div>
+
+    <!-- MotionSolve pipeline panel: only used when hosted by the pipeline
+         app (pywebview); stays hidden in a plain browser -->
+    <div class="card hidden" id="runCard">
+      <div class="adf-head">
+        <h2>MotionSolve run <span id="runVehName" class="veh-chip hidden"></span>
+          <span id="runStatus" class="hint"></span></h2>
+        <div class="run-tools">
+          <label class="volt-label">Pack voltage
+            <input type="number" id="runVoltage" step="10" min="1"> V
+          </label>
+          <button id="btnStop" class="stop-ms hidden" title="Kill the running solver">&#9632; STOP</button>
+          <button id="btnRunFolder" class="ghost hidden">Open run folder</button>
+          <button id="btnRunViewer" class="ghost hidden">Open in viewer</button>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="runBar"></div>
+      </div>
+      <div id="runPhase" class="hint"></div>
+      <pre id="runLog"></pre>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ VEHICLE BUILDER ============================ -->
+<main id="tab-vehicle" class="hidden">
+  <section id="vleft">
+    <form id="vehicleForm" onsubmit="return false">
+
+      <div class="card">
+        <h2>Vehicle <span class="badge spec">📋 spec sheet</span></h2>
+        <div class="row">
+          <label>Name<input type="text" id="vhName" spellcheck="false"></label>
+          <label>Mass (kg) <span class="badge sim">⚡ affects sim</span>
+            <input type="number" id="vhMass" step="10" min="1"></label>
+        </div>
+        <label class="apply-check"><input type="checkbox" id="vhApplyMass">
+          Apply mass to the model (patches the chassis body + inertia in each run's deck)</label>
+        <div class="row">
+          <label>Drag coefficient C<sub>d</sub><input type="number" id="vhCd" step="0.01" min="0"></label>
+          <label>Frontal area (m&sup2;)<input type="number" id="vhArea" step="0.05" min="0"></label>
+        </div>
+        <div class="row">
+          <label>Wheelbase (mm)<input type="number" id="vhWheelbase" step="5" min="0"></label>
+          <label>Steering ratio<input type="number" id="vhSteer" step="0.1" min="0"></label>
+        </div>
+        <div class="row">
+          <label>Track front (mm)<input type="number" id="vhTrackF" step="5" min="0"></label>
+          <label>Track rear (mm)<input type="number" id="vhTrackR" step="5" min="0"></label>
+        </div>
+        <div class="row">
+          <label>Front suspension<select id="vhSuspF"></select></label>
+          <label>Rear suspension<select id="vhSuspR"></select></label>
+        </div>
+        <p class="hint">Suspension geometry, masses and kinematics come from the
+        MotionView-exported deck — these fields document the vehicle and are
+        stamped into every run folder as <code>vehicle.json</code>.</p>
+      </div>
+
+      <div class="card">
+        <h2>Powertrain
+          <span class="badge sim">⚡ affects sim</span>
+          <label class="motor-count">Motors
+            <select id="vhMotorCount"><option value="1">1</option><option value="2">2</option></select>
+          </label>
+        </h2>
+        <label class="apply-check"><input type="checkbox" id="vhGenMotors">
+          Write these specs into the motor parameter files of every run
+          (torque/power/rpm &rarr; envelope + ratings; efficiency maps; drive-ratio couplers)</label>
+        <div id="motorCards"></div>
+        <details class="adv">
+          <summary>Advanced: replace other parameter files directly (VCU maps …)</summary>
+          <div id="matOverrides"></div>
+        </details>
+        <div class="row">
+          <label>Pack voltage (V) <span class="badge sim">⚡ affects sim</span>
+            <input type="number" id="vhPackV" step="10" min="1"></label>
+          <label>Pack capacity (kWh)<input type="number" id="vhPackKWh" step="1" min="0"></label>
+        </div>
+        <p class="hint">Pack voltage feeds the EM current estimate in the
+        PLT&rarr;MF4 conversion of every run.</p>
+      </div>
+
+      <div class="card">
+        <h2>Energy management (EMS)
+          <span class="badge sim">⚡ affects sim</span>
+        </h2>
+        <label class="apply-check"><input type="checkbox" id="vhEmsEnable">
+          <b>Enable EMS Builder</b> — regenerate the dual-motor torque-split
+          map for each run. Off = use the deck's built-in VCU map unchanged.</label>
+        <div id="emsBody">
+          <div class="row">
+            <label>Strategy
+              <select id="vhEmsStrategy">
+                <option value="loss_optimal">Loss-optimal (instantaneous ECMS)</option>
+                <option value="rule">Rule-based (single &rarr; dual threshold)</option>
+                <option value="fuzzy">Fuzzy logic</option>
+                <option value="even">Even split (50/50 baseline)</option>
+                <option value="single_motor">Single motor only</option>
+              </select>
+            </label>
+            <label id="emsThresholdWrap">Rule threshold (N·m)
+              <input type="number" id="vhEmsThreshold" step="10" min="0" value="250"></label>
+          </div>
+          <p id="emsDesc" class="hint"></p>
+          <details id="emsLearn" class="ems-explain">
+            <summary>📖 Explain this strategy</summary>
+            <div id="emsLearnBody"></div>
+          </details>
+          <p class="hint">Verified: the split map is consumed by the motor FMU
+          at this model's <code>vcu_type</code>. Compare strategies by running
+          each and viewing <b>EM1/EM2 torque</b> and <b>motor efficiency</b> in
+          the MF4 viewer. Loss-optimal reads the motor efficiency maps above,
+          so it re-optimizes when you change the motors.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Wheels &amp; tires</h2>
+        <div class="row">
+          <label>Rim diameter (in)<input type="number" id="vhRim" step="1" min="10"></label>
+          <label>Tire spec<input type="text" id="vhTire" placeholder="205/60R15" spellcheck="false"></label>
+        </div>
+        <div id="tireOverride"></div>
+      </div>
+
+      <div class="card">
+        <h2>Notes</h2>
+        <textarea id="vhNotes" rows="3" placeholder="battery chemistry, build revision, anything future-you will ask…"></textarea>
+      </div>
+
+    </form>
+  </section>
+
+  <section id="vright">
+    <div class="card">
+      <div class="adf-head">
+        <h2>Garage</h2>
+        <div>
+          <button id="btnVehToPreview" class="ghost" title="Push mass, CdA and tractive force into the scenario preview model">Use in scenario preview</button>
+          <button id="btnVehSave" class="ghost">Save vehicle</button>
+          <button id="btnVehLoad" class="ghost">Open vehicle</button>
+          <button id="btnVehReset" class="ghost">Reset</button>
+          <input type="file" id="fileVehJson" accept=".json" hidden>
+        </div>
+      </div>
+      <svg id="carSvg" viewBox="0 0 420 270" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="card">
+      <h2>Spec card <span class="hint">(live)</span></h2>
+      <div id="vehStats"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ MOTOR BUILDER ============================ -->
+<main id="tab-motor" class="hidden">
+  <section id="mleft">
+    <div class="card">
+      <h2>Map shape <span class="badge sim">⚡ feeds the motor files</span></h2>
+      <div class="mb-slider"><label>Peak efficiency <span class="mb-val" id="mbPeakVal"></span>
+        <input type="range" id="mbPeak" min="90" max="98.5" step="0.5"></label></div>
+      <div class="mb-slider"><label>Peak location — speed (% of max rpm) <span class="mb-val" id="mbSpd0Val"></span>
+        <input type="range" id="mbSpd0" min="10" max="90" step="1"></label></div>
+      <div class="mb-slider"><label>Peak location — torque (% of peak) <span class="mb-val" id="mbTrq0Val"></span>
+        <input type="range" id="mbTrq0" min="10" max="90" step="1"></label></div>
+      <div class="mb-slider"><label>Speed falloff (island width) <span class="mb-val" id="mbSpdFVal"></span>
+        <input type="range" id="mbSpdF" min="20" max="120" step="1"></label></div>
+      <div class="mb-slider"><label>Torque falloff (island height) <span class="mb-val" id="mbTrqFVal"></span>
+        <input type="range" id="mbTrqF" min="20" max="120" step="1"></label></div>
+      <p class="hint">The map is stored normalized (% of each motor's max rpm
+      and peak torque), so one shape fits any motor you apply it to. Grid is
+      the model's native 15&times;14.</p>
+    </div>
+
+    <div class="card">
+      <h2>Apply</h2>
+      <div class="row">
+        <button id="mbApply1">Use for Motor 1</button>
+        <button id="mbApply2">Use for Motor 2</button>
+      </div>
+      <div class="row">
+        <button id="mbCsv1" class="ghost">Download CSV (Motor 1 units)</button>
+        <button id="mbCsv2" class="ghost">Download CSV (Motor 2 units)</button>
+      </div>
+      <p class="hint">Applying pins this map to the motor (visible in its
+      Vehicle Builder card); every run's generated .mat then uses it. The
+      CSV uses that motor's physical rpm/N·m breakpoints — the same format
+      the upload button accepts.</p>
+      <div id="mbStatus" class="hint"></div>
+    </div>
+  </section>
+
+  <section id="mright">
+    <div class="card">
+      <h2>Efficiency map <span class="hint" id="mbHover">hover for values</span></h2>
+      <canvas id="mbCanvas" width="660" height="500"></canvas>
+    </div>
+  </section>
+</main>
+
+<template id="motorTemplate">
+  <div class="card motor-card">
+    <h3 class="motor-title">Motor</h3>
+    <div class="row">
+      <label>Name<input type="text" data-m="name" spellcheck="false"></label>
+      <label>Drive ratio (:1) <span class="badge sim">⚡ affects sim</span> <span class="hint">motor&rarr;wheel</span>
+        <input type="number" data-m="gearRatio" step="0.1" min="0"></label>
+    </div>
+    <div class="row">
+      <label>Peak power (kW)<input type="number" data-m="powerKW" step="5" min="0"></label>
+      <label>Peak torque (N·m)<input type="number" data-m="torqueNm" step="5" min="0"></label>
+    </div>
+    <div class="row">
+      <label>Max speed (rpm)<input type="number" data-m="maxRpm" step="500" min="0"></label>
+      <label>Rated voltage (V)<input type="number" data-m="ratedVoltageV" step="10" min="0"></label>
+    </div>
+    <div class="row">
+      <label>Rated current (A)<input type="number" data-m="ratedCurrentA" step="10" min="0"></label>
+      <label>&nbsp;</label>
+    </div>
+    <div class="eff-row">
+      <span class="eff-label">Efficiency map <span class="badge sim">⚡ affects sim</span></span>
+      <code class="setup-path eff-path">synthetic (built from ratings)</code>
+      <button type="button" class="ghost pick-eff" title="Upload a measured map: CSV grid (first row = torque Nm breakpoints, first column = speed rpm, cells = efficiency) or a .mat with m_eff_map">Upload…</button>
+      <button type="button" class="ghost reset-eff hidden">Reset</button>
+    </div>
+  </div>
+</template>
+
+<template id="phaseTemplate">
+  <div class="card phase-card">
+    <div class="phase-head" title="Click to locate this phase in the .adf output">
+      <h3><span class="phase-num"></span></h3>
+      <div class="phase-tools">
+        <button class="icon up" title="Move up">&#9650;</button>
+        <button class="icon down" title="Move down">&#9660;</button>
+        <button class="icon dup" title="Duplicate">&#10697;</button>
+        <button class="icon del" title="Delete">&#10005;</button>
+      </div>
+    </div>
+
+    <div class="sentence">
+      <span class="kw">Accelerator:</span>
+      <select class="f thrMode">
+        <option value="hold">hold at</option>
+        <option value="step">step to</option>
+      </select>
+      <input type="number" class="f short thrPct" min="0" max="100" step="1"><span class="unit">%</span>
+      <span class="riseWrap thrRiseWrap">over <input type="number" class="f short thrRise" min="0.01" step="0.05"><span class="unit">s</span></span>
+    </div>
+
+    <div class="sentence">
+      <span class="kw">Brake:</span>
+      <select class="f brkMode">
+        <option value="hold">hold at</option>
+        <option value="step">step to</option>
+      </select>
+      <input type="number" class="f short brkPct" min="0" max="100" step="1"><span class="unit">%</span>
+      <span class="riseWrap brkRiseWrap">over <input type="number" class="f short brkRise" min="0.01" step="0.05"><span class="unit">s</span></span>
+    </div>
+
+    <div class="sentence">
+      <span class="kw">Until:</span>
+      <select class="f exitType">
+        <option value="duration">duration elapsed</option>
+        <option value="speed_above">speed rises above</option>
+        <option value="speed_below">speed drops below</option>
+      </select>
+      <input type="number" class="f short exitValue" min="0" step="1"><span class="unit exitUnit">s</span>
+      <span class="capWrap">(max <input type="number" class="f short maxTime" min="1" step="5"><span class="unit">s</span>)</span>
+    </div>
+  </div>
+</template>
+
+<script src="app.js"></script>
+<script src="vehicle.js"></script>
+<script src="motorbuilder.js"></script>
+</body>
+</html>
