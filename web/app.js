@@ -242,7 +242,12 @@ function simulate() {
 function drawPlot(canvas, series, opts) {
   const dpr = window.devicePixelRatio || 1;
   const wCss = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
-  const hCss = canvas.getAttribute("height") ? parseInt(canvas.getAttribute("height")) : 200;
+  // capture the HTML height attribute ONCE as the design height: assigning
+  // canvas.height below rewrites that attribute, so re-reading it would
+  // multiply by dpr on every redraw (runaway canvas growth on hi-DPI displays)
+  if (!canvas.dataset.cssH)
+    canvas.dataset.cssH = canvas.getAttribute("height") || "200";
+  const hCss = parseInt(canvas.dataset.cssH);
   canvas.width = wCss * dpr;
   canvas.height = hCss * dpr;
   canvas.style.height = hCss + "px";

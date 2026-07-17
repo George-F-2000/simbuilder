@@ -64,6 +64,24 @@ DEFAULT_SETTINGS = {
 }
 
 
+def _heal_user_path(path):
+    """settings.json syncs between machines via OneDrive, but each machine
+    has its own user profile (C:\\Users\\George at home vs C:\\Users\\gfare
+    in the lab), so user-absolute paths from the other machine don't exist
+    here. If the stored path is missing, try the same path under THIS
+    machine's profile; keep the original otherwise. Healing is symmetric
+    and in-memory only, so both machines can share the one file."""
+    if not isinstance(path, str) or not path or os.path.exists(path):
+        return path
+    m = re.match(r"^[A-Za-z]:[\\/]Users[\\/][^\\/]+[\\/](.*)$", path)
+    if m:
+        candidate = os.path.normpath(
+            os.path.join(os.path.expanduser("~"), m.group(1)))
+        if os.path.exists(candidate):
+            return candidate
+    return path
+
+
 def load_settings():
     settings = dict(DEFAULT_SETTINGS)
     try:
@@ -71,6 +89,8 @@ def load_settings():
             settings.update(json.load(fh))
     except (OSError, ValueError):
         pass   # first launch (or broken file): defaults, saved on next change
+    for key in ("deck", "runs_dir", "motionsolve", "viewer"):
+        settings[key] = _heal_user_path(settings.get(key))
     return settings
 
 
@@ -96,6 +116,22 @@ PATH_TOKEN = re.compile(
 
 ADF_REF = re.compile(
     r'label\s*=\s*"Driver task file"[\s\S]{0,200}?string\s*=\s*"([^"]+)"')
+
+
+def xml_escape_amps(deck_text, log=None):
+    """The solver's XML parser is strict: a bare '&' anywhere in the deck -
+    typically a file path through a folder named like 'Vehicle Dynamics &
+    Calibration' - is 'not well-formed (invalid token)' and aborts the run
+    before a single step is solved. Escape every '&' that isn't already part
+    of an entity; existing &amp;/&lt;/&#nn; are left intact, so this never
+    double-escapes. Runs on the fully-patched deck, so it also cleans up any
+    '&' introduced by a vehicle override or inherited from the source deck."""
+    fixed, n = re.subn(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9A-Fa-f]+);)',
+                       '&amp;', deck_text)
+    if n and log:
+        log("  escaped {} bare '&' in the deck (XML-safety, e.g. a path "
+            "through an '&' folder name)".format(n))
+    return fixed
 
 
 def patch_deck(deck_text, source_dir, run_dir, log):
@@ -237,20 +273,32 @@ def patch_gear_ratios(deck_text, spec, log):
         else:
             log("  WARNING: gearbox expression with unknown axle - skipped")
             continue
-        ratio, old = ratios[idx], old_ratios[idx]
-        if ratio <= 0 or old is None:
+        ratio = ratios[idx]
+        if ratio <= 0:
             continue
-        pattern = r"\*\s*{}\s*\*".format(re.escape("{:g}".format(old)))
-        if not re.search(pattern, block):
-            log("  WARNING: ratio literal {:g} not found in gearbox "
-                "expression - not patched".format(old))
-            continue
-        new_block = re.sub(pattern, "*{:.6g}*".format(ratio), block)
-        if new_block != block:   # unchanged text = ratio already correct
+        # The gearing literal is the factor multiplying the gear spline:
+        #   ...*<ratio>*AKISPL(VARVAL(33200300),0,<marker>)...
+        # Patch it BY POSITION, not by matching the coupler's old value.
+        # This deck ships couplers at a placeholder 3.7 while the expressions
+        # already carry the real per-axle ratios (18 front / 9.59 rear), so
+        # the two diverge - a value-match against 3.7 would never fire and
+        # the motor would keep feeling the old gearing.
+        new_block, k = re.subn(
+            r'(\*\s*)[0-9.]+(\s*\*\s*AKISPL)',
+            lambda mm: "{}{:.6g}{}".format(mm.group(1), ratio, mm.group(2)),
+            block)
+        if k:
             deck_text = deck_text.replace(block, new_block, 1)
-        n_expr += 1
+            n_expr += k
+            log("  vehicle: {} gearbox expression re-geared to {:.6g}:1"
+                .format(("front", "rear")[idx], ratio))
+        else:
+            log("  WARNING: no '*<ratio>*AKISPL' gearing literal in the {} "
+                "gearbox expression - not patched".format(
+                    ("front", "rear")[idx]))
     if n_expr:
-        log("  vehicle: {} gearbox torque/speed expressions re-geared".format(n_expr))
+        log("  vehicle: {} gearbox torque/speed expressions re-geared"
+            .format(n_expr))
     return deck_text
 
 
@@ -307,8 +355,19 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
     if vehicle.get("generate_motors") and spec.get("motors"):
         log("  generating motor parameter files from vehicle spec:")
         import motor_gen
-        motor_gen.generate_motor_files(spec, run_dir, log=log)
+        written = motor_gen.generate_motor_files(spec, run_dir, log=log)
         deck_text = patch_gear_ratios(deck_text, spec, log)
+        # decks with EXTERNAL motor .mat files are handled above. Decks that
+        # carry the motor maps INSIDE the FMU (e.g. LYRIQ) write nothing there,
+        # so rebuild the FMU's internal motor data in the run folder instead.
+        if not written:
+            import fmu_inject
+            deck_text, injected = fmu_inject.inject_motor_fmu(
+                deck_text, run_dir, spec, log)
+            if not injected:
+                log("  NOTE: motor generation is on, but this deck has neither "
+                    "external motor .mat files nor an FMU carrying motor data - "
+                    "motors left at the deck/FMU defaults.")
 
     # explicit whole-file overrides win over generated files
     for base, path in (vehicle.get("mat_overrides") or {}).items():
@@ -341,10 +400,13 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
 
 
 def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
-                aux_files=None):
+                aux_files=None, dir_holder=None):
     """Set up a self-contained run folder. Returns (run_dir, deck_name).
     aux_files: {filename: text} written next to the ADF (e.g. the .ddf
-    path/speed companion of an imported real drive)."""
+    path/speed companion of an imported real drive).
+    dir_holder: if given, its "dir" key is set to the run folder the moment
+    it exists - so callers can open the folder even when a later step (e.g.
+    the solver rejecting the deck) raises before this returns."""
     deck_src = settings["deck"]
     if not os.path.isfile(deck_src):
         raise FileNotFoundError("Solver deck not found: " + deck_src)
@@ -354,6 +416,8 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
     run_dir = os.path.join(settings["runs_dir"],
                            "{}_{}".format(stem, time.strftime("%Y%m%d_%H%M%S")))
     os.makedirs(run_dir)
+    if dir_holder is not None:
+        dir_holder["dir"] = run_dir
     log("Run folder: " + run_dir)
 
     with open(deck_src, encoding="utf-8", errors="replace") as fh:
@@ -368,6 +432,7 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
 
     deck_text = patch_deck(deck_text, source_dir, run_dir, log)
     deck_text = apply_vehicle(vehicle, deck_text, source_dir, run_dir, log)
+    deck_text = xml_escape_amps(deck_text, log)   # never ship malformed XML
 
     deck_name = stem + ".xml"
     with open(os.path.join(run_dir, deck_name), "w", encoding="utf-8") as fh:
@@ -527,7 +592,7 @@ def launch_viewer(settings, mf4_path, log):
 
 def run_scenario(settings, scenario_name, adf_text, log, progress=None,
                  proc_holder=None, viewer_launcher=None, vehicle=None,
-                 aux_files=None):
+                 aux_files=None, dir_holder=None):
     """The full sequence. Returns (run_dir, mf4_path). Raises on failure.
 
     progress(fraction 0..1 or None, text) drives the UI progress bar;
@@ -543,7 +608,8 @@ def run_scenario(settings, scenario_name, adf_text, log, progress=None,
     t0 = time.time()
     report(None, "preparing run folder…")
     run_dir, deck_name = prepare_run(settings, scenario_name, adf_text, log,
-                                     vehicle=vehicle, aux_files=aux_files)
+                                     vehicle=vehicle, aux_files=aux_files,
+                                     dir_holder=dir_holder)
     report(0.0, "starting MotionSolve…")
     plt_path = run_motionsolve(settings, run_dir, deck_name, log,
                                progress=progress,
