@@ -610,13 +610,14 @@ $("#btnVehReset").onclick = () => {
 
 function switchTab(which) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === which));
-  ["scenario", "vehicle", "motor"].forEach(id => {
+  ["scenario", "vehicle", "motor", "results"].forEach(id => {
     const el = $("#tab-" + id);
     if (el) el.classList.toggle("hidden", id !== which);
   });
   // canvases don't draw while display:none - redraw on entry
   if (which === "scenario" && typeof refresh === "function") refresh(false);
   if (which === "motor" && typeof mbRefresh === "function") mbRefresh();
+  if (which === "results" && typeof resultsOnEnter === "function") resultsOnEnter();
 }
 $$(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.tab));
 switchTab("vehicle");   // Vehicle Builder is the first stop

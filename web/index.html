@@ -16,6 +16,7 @@
     <button class="tab active" data-tab="vehicle">Vehicle Builder</button>
     <button class="tab" data-tab="motor">Motor Builder</button>
     <button class="tab" data-tab="scenario">Scenario Builder</button>
+    <button class="tab" data-tab="results">Results</button>
   </nav>
   <div class="header-actions">
     <button id="btnOpenViewer" class="ghost hidden" title="Open the MF4 viewer">MF4 Viewer</button>
@@ -381,6 +382,35 @@
   </section>
 </main>
 
+<!-- ============================= RESULTS TAB ============================= -->
+<main id="tab-results" class="hidden">
+  <section class="res-full">
+    <div class="card">
+      <div class="adf-head">
+        <h2>Results — campaign leaderboard
+          <span class="hint">one row per run in the runs folder</span></h2>
+        <div class="run-tools">
+          <button id="btnResRefresh" class="ghost">Refresh</button>
+          <button id="btnResRecompute" class="ghost"
+            title="Ignore the cache and recompute every run's metrics">Recompute all</button>
+          <button id="btnResExport" class="ghost">Export CSV…</button>
+        </div>
+      </div>
+      <p class="hint" id="resRunsDir"></p>
+      <p class="hint" id="resHint">Available inside the SimBuilder app.</p>
+      <div id="resTableWrap"><table id="resTable"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Comparisons
+        <span class="hint">Wh/km by run (color = EMS strategy) · efficiency vs drivability</span></h2>
+      <canvas id="resBar" width="1100" height="240"></canvas>
+      <canvas id="resScatter" width="1100" height="300"></canvas>
+      <div id="resLegend" class="hint"></div>
+    </div>
+  </section>
+</main>
+
 <template id="motorTemplate">
   <div class="card motor-card">
     <h3 class="motor-title">Motor</h3>
@@ -458,5 +488,6 @@
 <script src="app.js"></script>
 <script src="vehicle.js"></script>
 <script src="motorbuilder.js"></script>
+<script src="results.js"></script>
 </body>
 </html>

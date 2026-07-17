@@ -451,3 +451,22 @@ canvas { width: 100%; display: block; margin-bottom: 8px; }
 }
 #driveCycleRow.hidden { display: none !important; }
 #driveCycleRow button { flex: 1; }
+
+/* ---------- results tab ---------- */
+.res-full { grid-column: 1 / -1; }
+#resTableWrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+#resTable { border-collapse: collapse; width: 100%; font-size: 12px; }
+#resTable th {
+  position: sticky; top: 0; background: #eef1f5; color: #33404e;
+  text-align: left; padding: 6px 8px; cursor: pointer; user-select: none;
+  white-space: nowrap;
+}
+#resTable td { padding: 5px 8px; border-top: 1px solid #e5e9ee; white-space: nowrap; }
+#resTable tr:hover td { background: #f5f8fb; }
+.res-err td { color: #c0392b; }
+.res-actions button { padding: 2px 7px; }
+.ems-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 5px; vertical-align: middle;
+}
+#resBar, #resScatter { width: 100%; height: auto; display: block; margin-bottom: 8px; }
