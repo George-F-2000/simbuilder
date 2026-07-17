@@ -91,6 +91,14 @@ cd pipeline-app
 "..\CSV to MDF Converter\csv-to-mf4-app\.venv\Scripts\python.exe" main.py
 ```
 
+**RUN AVL CYCLE** (Scenario tab, preset card) runs every preset pedal
+level (10, 20, 30, 40, 50, 60, 70, 100 %) back-to-back at the presets'
+h_max of 0.01 s: one run folder + one MF4 per level, no viewer per run,
+the runs folder opens when the batch finishes. Overall progress spans the
+whole batch; STOP aborts the remaining runs; a failed run logs its error
+and the batch continues with the next one. Note these presets launch from
+standstill, which this model solves slowly — budget real time.
+
 Define the vehicle (or load one), build the scenario, then press
 **▶ RUN IN MOTIONSOLVE**. The run panel shows a progress bar driven by the
 solver's own time steps, the live log, and a **STOP** button that kills the

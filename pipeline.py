@@ -552,7 +552,9 @@ def run_scenario(settings, scenario_name, adf_text, log, progress=None,
                        pack_voltage=float(settings.get(
                            "pack_voltage", DEFAULT_PACK_VOLTAGE)),
                        serial_number=serial_number)
-    if viewer_launcher is not None:
+    if viewer_launcher is False:
+        log("Viewer not opened (batch mode).")
+    elif viewer_launcher is not None:
         viewer_launcher(mf4_path)
         log("Viewer opened with " + os.path.basename(mf4_path))
     else:

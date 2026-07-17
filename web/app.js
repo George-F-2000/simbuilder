@@ -710,10 +710,58 @@ window.msPipe = {
     bar.style.width = ok ? "100%" : bar.style.width;
     bar.classList.toggle("failed", !ok);
     $("#btnRun").disabled = false;
+    $("#btnRunCycle").disabled = false;
     $("#btnStop").classList.add("hidden");
     $("#btnRunFolder").classList.remove("hidden");
     if (ok) $("#btnRunViewer").classList.remove("hidden");
   },
+};
+
+/* shared run-panel preparation for single runs and the AVL cycle batch */
+function openRunPanel(statusText) {
+  $("#runCard").classList.remove("hidden");
+  $("#btnRunFolder").classList.add("hidden");
+  $("#btnRunViewer").classList.add("hidden");
+  $("#btnStop").classList.remove("hidden");
+  $("#runLog").textContent = "";
+  $("#runStatus").textContent = statusText;
+  $("#runPhase").textContent = "";
+  const bar = $("#runBar");
+  bar.classList.remove("failed");
+  bar.style.width = "0%";
+  const vi = typeof vehInfo === "function" ? vehInfo() : {};
+  const rv = $("#runVehName");
+  rv.textContent = "🚗 " + (vi.name || "unnamed vehicle") +
+    (vi.serial ? " · " + vi.serial : "");
+  rv.classList.remove("hidden");
+  $("#btnRun").disabled = true;
+  $("#btnRunCycle").disabled = true;
+  $("#runCard").scrollIntoView({ behavior: "smooth" });
+}
+
+/* RUN AVL CYCLE: every preset pedal level, back-to-back, at the presets'
+   h_max of 0.01 s (10 ms). One run folder + MF4 per level. */
+$("#btnRunCycle").onclick = async () => {
+  const runs = PRESET_PCTS.map(pct => {
+    const saved = sc;
+    sc = presetTip(pct);                       // ADF generator reads global sc
+    const adf = generateSegments().map(sg => sg.text).join("");
+    sc = saved;
+    return { name: `TipInOut_${pct}pct_50_20`, adf };
+  });
+  if (!confirm(
+      `RUN AVL CYCLE — ${runs.length} MotionSolve runs, back to back:\n` +
+      `pedal levels ${PRESET_PCTS.join(", ")} %\n\n` +
+      `Each run gets its own folder and MF4 (h_max 0.01 s / 10 ms).\n` +
+      `These start from standstill, so expect this to take a while;\n` +
+      `STOP aborts the remaining runs. Continue?`)) return;
+  openRunPanel("starting AVL cycle…");
+  const res = await pywebview.api.run_batch(runs,
+    window.vehiclePayload ? vehiclePayload() : null);
+  if (!res.ok) {
+    msPipe.log("ERROR: " + res.error);
+    msPipe.done(false, null, null);
+  }
 };
 
 function applyState(state) {
@@ -747,6 +795,7 @@ function applyState(state) {
 
 window.addEventListener("pywebviewready", async () => {
   $("#btnRun").classList.remove("hidden");
+  $("#btnRunCycle").classList.remove("hidden");
   $("#btnOpenViewer").classList.remove("hidden");
   $("#btnOpenPlt").classList.remove("hidden");
   $("#toolsSep").classList.remove("hidden");
@@ -763,29 +812,13 @@ $("#btnPickRuns").onclick = async () => applyState(await pywebview.api.pick_runs
 $("#btnOpenRuns").onclick = () => pywebview.api.open_runs_root();
 
 $("#btnRun").onclick = async () => {
-  $("#runCard").classList.remove("hidden");
-  $("#btnRunFolder").classList.add("hidden");
-  $("#btnRunViewer").classList.add("hidden");
-  $("#runLog").textContent = "";
-  $("#runStatus").textContent = "starting…";
-  const rv = $("#runVehName");
-  const vi = typeof vehInfo === "function" ? vehInfo() : {};
-  rv.textContent = "🚗 " + (vi.name || "unnamed vehicle") +
-    (vi.serial ? " · " + vi.serial : "");
-  rv.classList.remove("hidden");
-  const bar = $("#runBar");
-  bar.classList.remove("failed");
-  bar.style.width = "0";
-  $("#btnRun").disabled = true;
+  openRunPanel("starting…");
   const res = await pywebview.api.run_scenario(sc.name || safeName(), adfText,
     window.vehiclePayload ? vehiclePayload() : null);
   if (!res.ok) {
     msPipe.log("ERROR: " + res.error);
     msPipe.done(false, null, null);
-  } else {
-    $("#btnStop").classList.remove("hidden");
   }
-  $("#runCard").scrollIntoView({ behavior: "smooth" });
 };
 
 $("#btnStop").onclick = async () => {

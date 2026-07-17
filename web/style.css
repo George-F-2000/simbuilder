@@ -440,3 +440,5 @@ canvas { width: 100%; display: block; margin-bottom: 8px; }
 
 .phase-head { cursor: pointer; }
 .phase-head:hover h3 { color: var(--accent); }
+
+#btnRunCycle { width: 100%; margin-top: 8px; }

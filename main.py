@@ -36,10 +36,12 @@ BASE = (os.path.dirname(os.path.abspath(sys.executable))
         if getattr(sys, "frozen", False)
         else os.path.dirname(os.path.abspath(__file__)))
 
-# running from source: make the canonical viewer module importable
+# running from source: make the canonical viewer module importable.
+# NOTE: must point at mf4-viewer-app (viewer.py only) - pointing at a
+# folder that also has a converter.py would shadow this app's converter.
 if not getattr(sys, "frozen", False):
-    sys.path.insert(0, os.path.normpath(os.path.join(
-        BASE, "..", "CSV to MDF Converter", "csv-to-mf4-app")))
+    sys.path.append(os.path.normpath(os.path.join(
+        BASE, "..", "CSV to MDF Converter", "mf4-viewer-app")))
 
 
 def self_command(*args):
@@ -148,6 +150,72 @@ class Api:
                          args=(scenario_name, adf_text, vehicle),
                          daemon=True).start()
         return {"ok": True}
+
+    def run_batch(self, runs, vehicle=None):
+        """Run several scenarios back-to-back (the RUN AVL CYCLE button):
+        each gets its own run folder + MF4; no viewer per run; the runs
+        root opens at the end. STOP aborts the remaining runs."""
+        if self.running:
+            return {"ok": False, "error": "A run is already in progress."}
+        if not runs:
+            return {"ok": False, "error": "Nothing to run."}
+        self.running = True
+        self.stop_requested = False
+        if vehicle and vehicle.get("pack_voltage"):
+            self.set_voltage(vehicle["pack_voltage"])
+        threading.Thread(target=self._batch_worker,
+                         args=(list(runs), vehicle), daemon=True).start()
+        return {"ok": True}
+
+    def _batch_worker(self, runs, vehicle):
+        n, ok, failed = len(runs), 0, 0
+        try:
+            for i, r in enumerate(runs):
+                if self.stop_requested:
+                    self._log("*** batch stopped by user - {} run(s) "
+                              "skipped ***".format(n - i))
+                    break
+                self._log("")
+                self._log("=" * 58)
+                self._log("BATCH RUN {}/{}: {}".format(i + 1, n, r["name"]))
+                self._log("=" * 58)
+                self._status("batch {}/{}: {}".format(i + 1, n, r["name"]))
+
+                def prog(frac, text, _base=float(i)):
+                    self._progress((_base + (frac or 0.0)) / n,
+                                   "run {}/{} — {}".format(i + 1, n, text))
+
+                try:
+                    run_dir, mf4 = self.pipeline.run_scenario(
+                        self.settings, r["name"], r["adf"], log=self._log,
+                        progress=prog, proc_holder=self.proc_holder,
+                        vehicle=vehicle, viewer_launcher=False)
+                    self.last_run_dir, self.last_mf4 = run_dir, mf4
+                    ok += 1
+                except Exception as exc:
+                    if self.stop_requested:
+                        self._log("Run stopped by user.")
+                        continue   # loop breaks at the top
+                    failed += 1
+                    self._log("ERROR in {}: {}: {} - continuing with the "
+                              "next run".format(r["name"],
+                                                type(exc).__name__, exc))
+            self._log("")
+            self._log("BATCH FINISHED: {} ok, {} failed, {} of {} attempted."
+                      .format(ok, failed, ok + failed, n))
+            if ok and not self.stop_requested:
+                try:
+                    os.startfile(self.settings["runs_dir"])
+                except Exception:
+                    pass
+            self._status("stopped" if self.stop_requested else
+                         "batch done — {} ok, {} failed".format(ok, failed))
+            self._js("msPipe.done({}, {}, {})".format(
+                "true" if ok and not failed and not self.stop_requested
+                else "false",
+                json.dumps(self.last_mf4), json.dumps(self.last_run_dir)))
+        finally:
+            self.running = False
 
     def stop_run(self):
         """Kill the solver process tree. The worker thread then unwinds."""
