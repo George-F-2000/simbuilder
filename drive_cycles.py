@@ -68,11 +68,20 @@ def build_cycle_adf(name, hmax=0.01, print_interval=0.01, t_max=None):
     if t_max is not None:
         keep = [i for i, x in enumerate(t) if x <= t_max]
         t, v = [t[i] for i in keep], [v[i] for i in keep]
-    sim_time = t[-1]
+    return build_adf_from_series(name, title, t,
+                                 [x * MPH_TO_MMS for x in v],
+                                 hmax=hmax, print_interval=print_interval)
 
-    rows = "\n".join(" {:<16} {:<15}".format(round(ts, 2),
-                                             round(vs * MPH_TO_MMS, 2))
-                     for ts, vs in zip(t, v))
+
+def build_adf_from_series(name, title, t_s, v_mms, hmax=0.01,
+                          print_interval=0.01):
+    """Closed-loop speed-following ADF from an arbitrary time/velocity
+    series (velocities in mm/s). Shared by the EPA cycles and the
+    real-drive importer's speed-only mode."""
+    sim_time = t_s[-1]
+    rows = "\n".join(" {:<16} {:<15}".format(round(float(ts), 2),
+                                             round(float(vs), 2))
+                     for ts, vs in zip(t_s, v_mms))
 
     return """$-----------------------------------------------------------------------ALTAIR_HEADER
 [ALTAIR_HEADER]
@@ -168,6 +177,6 @@ TAG = 'ENGINE_SPEED'
  3   650     125     0.45    0.05    0.1     0.1     0.05    0.05    0.05
  4   650     125     0.45    0.05    0.1     0.1     0.05    0.05    0.05
  5   650     125     0.45    0.05    0.1     0.1     0.05    0.05    0.05
-""".format(name=name, title=title, n=len(t), sim=sim_time,
-           vx0=v[0] * MPH_TO_MMS, hmax=hmax, pint=print_interval,
+""".format(name=name, title=title, n=len(t_s), sim=sim_time,
+           vx0=float(v_mms[0]), hmax=hmax, pint=print_interval,
            rows=rows)

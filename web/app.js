@@ -797,6 +797,100 @@ function runDriveCycle(name, blurb) {
     }
   };
 }
+/* ---------------- real-drive import (logged MF4 -> scenario) ------------ */
+
+let impPath = null;
+
+function impFillSelects(channels) {
+  const opts = channels.map(c =>
+    `<option value="${escHtml(c.name)}">${escHtml(c.name)}` +
+    `${c.unit ? " [" + escHtml(c.unit) + "]" : ""}</option>`).join("");
+  for (const id of ["impSpeedCh", "impYawCh", "impSteerCh", "impLatCh", "impLonCh"]) {
+    $("#" + id).innerHTML = opts;
+  }
+  // best-guess defaults by name
+  const pick = (id, re) => {
+    const hit = channels.find(c => re.test(c.name));
+    if (hit) $("#" + id).value = hit.name;
+  };
+  pick("impSpeedCh", /speed|veloc|vx/i);
+  pick("impYawCh", /yaw/i);
+  pick("impSteerCh", /steer/i);
+  pick("impLatCh", /lat(itude)?$/i);
+  pick("impLonCh", /lon(gitude)?$|lng/i);
+}
+
+function impLateralRows() {
+  const mode = $("#impLateral").value;
+  $("#impYawRow").style.display = mode === "yaw" ? "" : "none";
+  $("#impSteerRow").style.display = mode === "steer" ? "" : "none";
+  $("#impGpsRow").style.display = mode === "gps" ? "" : "none";
+}
+$("#impLateral").addEventListener("change", impLateralRows);
+
+$("#btnImpPick").onclick = async () => {
+  const r = await pywebview.api.import_drive_pick();
+  if (!r.ok) { if (r.error) alert(r.error); return; }
+  impPath = r.path;
+  $("#impFile").textContent = r.path.split(/[\\/]/).pop() +
+    "  (" + r.channels.length + " channels)";
+  impFillSelects(r.channels);
+  impLateralRows();
+  $("#impBody").classList.remove("hidden");
+  $("#btnImpRun").classList.add("hidden");
+  $("#impStats").textContent = "";
+};
+
+$("#btnImpBuild").onclick = async () => {
+  if (!impPath) return;
+  readVehicleInputs && readVehicleInputs();
+  const cfg = {
+    path: impPath,
+    name: $("#impName").value,
+    speed_ch: $("#impSpeedCh").value,
+    speed_unit: $("#impSpeedUnit").value,
+    lateral: $("#impLateral").value,
+    yaw_ch: $("#impYawCh").value, yaw_unit: $("#impYawUnit").value,
+    steer_ch: $("#impSteerCh").value, steer_unit: $("#impSteerUnit").value,
+    lat_ch: $("#impLatCh").value, lon_ch: $("#impLonCh").value,
+    t_start: $("#impT0").value || null,
+    t_end: $("#impT1").value || null,
+  };
+  if (typeof vehInfo === "function") {
+    cfg.steer_ratio = veh.steerRatio;
+    cfg.wheelbase_mm = veh.wheelbaseMm;
+  }
+  $("#impStats").textContent = "extracting…";
+  const r = await pywebview.api.import_drive_build(cfg);
+  if (!r.ok) { $("#impStats").textContent = "ERROR: " + r.error; return; }
+  const s = r.stats;
+  let txt = `${s.duration_s} s · ${s.dist_km} km · Vmax ${s.v_max_kph} km/h` +
+    ` · starts at ${s.v_start_kph} km/h · ${s.n_samples} samples` +
+    ` · lateral: ${s.lateral}`;
+  if (s.path_len_km !== undefined) {
+    txt += ` · path ${s.path_len_km} km`;
+    if (s.path_vs_odo_pct !== undefined) {
+      txt += ` (${s.path_vs_odo_pct}% of odometer` +
+        (Math.abs(s.path_vs_odo_pct - 100) > 5 ? " ⚠ check channels/units" : " ✓") + ")";
+    }
+  }
+  if (s.v_start_kph < 3) {
+    txt += "  ⚠ starts near standstill — will solve slowly at first";
+  }
+  $("#impStats").textContent = txt;
+  $("#btnImpRun").classList.remove("hidden");
+};
+
+$("#btnImpRun").onclick = async () => {
+  openRunPanel("starting imported drive…");
+  const res = await pywebview.api.run_imported(
+    window.vehiclePayload ? vehiclePayload() : null);
+  if (!res.ok) {
+    msPipe.log("ERROR: " + res.error);
+    msPipe.done(false, null, null);
+  }
+};
+
 $("#btnUdds").onclick = runDriveCycle("UDDS",
   "EPA city cycle: 1369 s, ~17 stops. Every stop is a standstill dwell — " +
   "this is the LONG one (plan for hours).");
@@ -837,6 +931,7 @@ window.addEventListener("pywebviewready", async () => {
   $("#btnRun").classList.remove("hidden");
   $("#btnRunCycle").classList.remove("hidden");
   $("#driveCycleRow").classList.remove("hidden");
+  $("#importCard").classList.remove("hidden");
   $("#btnOpenViewer").classList.remove("hidden");
   $("#btnOpenPlt").classList.remove("hidden");
   $("#toolsSep").classList.remove("hidden");
