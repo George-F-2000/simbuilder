@@ -174,3 +174,15 @@ strategy is written into `vehicle.json` and the run manifest.
 - Tire picker: dropdown of compatible MF_SWIFT .tir files with dimensions
   parsed from inside each file, auto-syncing the tire-spec text.
 - Steering ratio ⚡: the rack coupler (8.5) is identified and patchable.
+
+## Results tab
+
+The campaign leaderboard: one row per run in the runs folder, computed
+from the MF4 + `vehicle.json` (cached by MF4 mtime; "Recompute all"
+ignores the cache). Metrics: distance, net battery energy, **Wh/km**,
+ΔSOC, drive-cycle tracking RMSE (UDDS/HWFET runs), jerk RMS, motor
+on/off **chatter per minute**, Vmax, and a ✓/⚠ serial cross-check
+between `vehicle.json` and the MF4's VehicleSerial channel. Sortable
+columns; per-row open-folder / open-in-viewer buttons; Wh/km bar chart
+colored by EMS strategy; the efficiency-vs-drivability scatter (bottom-
+left wins); CSV export for publication plots.
