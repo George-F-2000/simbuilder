@@ -442,3 +442,12 @@ canvas { width: 100%; display: block; margin-bottom: 8px; }
 .phase-head:hover h3 { color: var(--accent); }
 
 #btnRunCycle { width: 100%; margin-top: 8px; }
+
+#driveCycleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+#driveCycleRow.hidden { display: none !important; }
+#driveCycleRow button { flex: 1; }

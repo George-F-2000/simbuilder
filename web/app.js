@@ -764,6 +764,28 @@ $("#btnRunCycle").onclick = async () => {
   }
 };
 
+/* EPA drive cycles (closed-loop demand-curve scenarios) */
+function runDriveCycle(name, blurb) {
+  return async () => {
+    if (!confirm(`Run the ${name} drive cycle?\n\n${blurb}\n\nThe vehicle ` +
+                 `from Vehicle Builder is used; results land in the runs ` +
+                 `folder as ${name}_<timestamp> with its own MF4.`)) return;
+    openRunPanel(`starting ${name}…`);
+    const res = await pywebview.api.run_cycle(name,
+      window.vehiclePayload ? vehiclePayload() : null);
+    if (!res.ok) {
+      msPipe.log("ERROR: " + res.error);
+      msPipe.done(false, null, null);
+    }
+  };
+}
+$("#btnUdds").onclick = runDriveCycle("UDDS",
+  "EPA city cycle: 1369 s, ~17 stops. Every stop is a standstill dwell — " +
+  "this is the LONG one (plan for hours).");
+$("#btnHwfet").onclick = runDriveCycle("HWFET",
+  "EPA highway cycle: 765 s, no stops after the initial launch — " +
+  "solves far faster than UDDS.");
+
 function applyState(state) {
   $("#runVoltage").value = state.settings.pack_voltage;
 
@@ -796,6 +818,7 @@ function applyState(state) {
 window.addEventListener("pywebviewready", async () => {
   $("#btnRun").classList.remove("hidden");
   $("#btnRunCycle").classList.remove("hidden");
+  $("#driveCycleRow").classList.remove("hidden");
   $("#btnOpenViewer").classList.remove("hidden");
   $("#btnOpenPlt").classList.remove("hidden");
   $("#toolsSep").classList.remove("hidden");

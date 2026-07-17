@@ -37,6 +37,13 @@
       <button id="btnRunCycle" class="run-ms hidden"
         title="Run EVERY preset pedal level back-to-back at h_max 0.01 s (10 ms). Each run gets its own folder and MF4; the runs folder opens when the batch finishes.">
         &#9654; RUN AVL CYCLE — all pedal levels</button>
+      <div id="driveCycleRow" class="hidden">
+        <span class="setup-label" style="flex:0 0 auto">Drive cycles<br>(closed-loop)</span>
+        <button id="btnUdds" class="ghost"
+          title="EPA Urban Dynamometer Driving Schedule: 1369 s city cycle with ~17 stops. The efficiency benchmark for city driving — expect a LONG solve (standstill dwell at every stop).">UDDS — city, 1369 s</button>
+        <button id="btnHwfet" class="ghost"
+          title="EPA Highway Fuel Economy Test: 765 s, 16–96 km/h, no stops after launch. The efficiency benchmark for highway driving — solves much faster than UDDS.">HWFET — highway, 765 s</button>
+      </div>
     </div>
 
     <div class="card" id="scenarioCard">

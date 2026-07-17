@@ -241,13 +241,14 @@ def patch_gear_ratios(deck_text, spec, log):
         if ratio <= 0 or old is None:
             continue
         pattern = r"\*\s*{}\s*\*".format(re.escape("{:g}".format(old)))
-        new_block = re.sub(pattern, "*{:.6g}*".format(ratio), block)
-        if new_block != block:
-            deck_text = deck_text.replace(block, new_block, 1)
-            n_expr += 1
-        else:
+        if not re.search(pattern, block):
             log("  WARNING: ratio literal {:g} not found in gearbox "
                 "expression - not patched".format(old))
+            continue
+        new_block = re.sub(pattern, "*{:.6g}*".format(ratio), block)
+        if new_block != block:   # unchanged text = ratio already correct
+            deck_text = deck_text.replace(block, new_block, 1)
+        n_expr += 1
     if n_expr:
         log("  vehicle: {} gearbox torque/speed expressions re-geared".format(n_expr))
     return deck_text

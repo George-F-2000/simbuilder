@@ -134,8 +134,9 @@ patcher fixes machine-specific paths automatically:
   --add-data "..\CSV to MDF Converter\mf4-viewer-app\assets\mf4viewer.ico;." `
   --add-data "..\CSV to MDF Converter\plt-to-mf4-app\assets\plttomf4.ico;." `
   --add-data "web;web" `
+  --add-data "cycles;cycles" `
   --paths "..\CSV to MDF Converter\mf4-viewer-app" `
-  --hiddenimport viewer --collect-all tkinterdnd2 `
+  --hiddenimport viewer --hiddenimport drive_cycles --collect-all tkinterdnd2 `
   main.py
 ```
 

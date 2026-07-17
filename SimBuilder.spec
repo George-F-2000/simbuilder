@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/assets/mf4viewer.ico', '.'), ('../CSV to MDF Converter/plt-to-mf4-app/assets/plttomf4.ico', '.'), ('web', 'web')]
+datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/assets/mf4viewer.ico', '.'), ('../CSV to MDF Converter/plt-to-mf4-app/assets/plttomf4.ico', '.'), ('web', 'web'), ('cycles', 'cycles')]
 binaries = []
-hiddenimports = ['viewer', 'ems_builder', 'motor_gen']
+hiddenimports = ['viewer', 'ems_builder', 'motor_gen', 'drive_cycles']
 tmp_ret = collect_all('tkinterdnd2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
