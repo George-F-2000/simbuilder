@@ -39,6 +39,7 @@ DEFAULT_PACK_VOLTAGE = 380.0
 # ----------------------------------------------------------------------------
 
 R_DRIVER_OUT = "Driver outputs: Steer angle, Throttle, Brake, Gear, clutch, Distance Travelled"
+R_DRIVER_IN1 = "Driver inputs 1: Veh CG(x) ,  Veh CG(y), Veh CG(z), Roll, Pitch, Yaw"
 R_DRIVER_IN2 = "Driver inputs 2:  Long vel, Lat vel , Yaw rate, Roll rate, Pitch rate , Engine speed"
 R_DRIVER_IN3 = "Driver inputs 3 : Long acc , Lat acc"
 R_MOTOR_F    = "Motor - front (FMU) Outputs"
@@ -60,6 +61,8 @@ SIGNAL_MAP = {
     "GearDMU":              (R_DRIVER_OUT, "Gear"),
     "SteeringWheelAngle":   (R_DRIVER_OUT, "Steer angle"),
     "VehicleSpeed":         (R_DRIVER_IN2, "Long. vel."),
+    "VehPosX":              (R_DRIVER_IN1, "Veh CG-X"),
+    "VehPosY":              (R_DRIVER_IN1, "Veh CG-Y"),
     "WheelSpeed_FL":        (R_ESP_OMEGA,  "Front-left"),
     "WheelSpeed_FR":        (R_ESP_OMEGA,  "Front-right"),
     "WheelSpeed_RL":        (R_ESP_OMEGA,  "Rear-left"),
@@ -117,6 +120,8 @@ CHANNEL_CONFIG = {
     "SelectorLeverDMU":     ("-",     1.0,           0.0,    "",        "Selector lever (derived: 1 = Drive)"),
     "SteeringWheelAngle":   ("deg",   RAD_TO_DEG,    0.0,    "rad",     "Steering wheel angle (rad -> deg)"),
     "VehicleSpeed":         ("km/h",  0.0036,        0.0,    "",        "Vehicle longitudinal speed (mm/s -> km/h)"),
+    "VehPosX":              ("m",     0.001,         0.0,    "",        "Vehicle CG global X (mm -> m; for track maps)"),
+    "VehPosY":              ("m",     0.001,         0.0,    "",        "Vehicle CG global Y (mm -> m; for track maps)"),
     "WheelSpeed_FL":        ("1/min", RAD_S_TO_RPM,  0.0,    "rad/s",   "Wheel speed front-left (rad/s -> rpm)"),
     "WheelSpeed_FR":        ("1/min", RAD_S_TO_RPM,  0.0,    "rad/s",   "Wheel speed front-right (rad/s -> rpm)"),
     "WheelSpeed_RL":        ("1/min", RAD_S_TO_RPM,  0.0,    "rad/s",   "Wheel speed rear-left (rad/s -> rpm)"),
@@ -133,7 +138,7 @@ COLUMN_ORDER = [
     "EM2Current", "EM2Speed", "EM2Torque",
     "GearDMU", "SelectorLeverDMU",
     "SteeringWheelAngle",
-    "VehicleSpeed",
+    "VehicleSpeed", "VehPosX", "VehPosY",
     "WheelSpeed_FL", "WheelSpeed_FR", "WheelSpeed_RL", "WheelSpeed_RR",
 ]
 

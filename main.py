@@ -179,7 +179,14 @@ class Api:
             d = drive_import.extract_drive(cfg["path"], cfg)
             name = re.sub(r"[^\w\-]+", "_",
                           cfg.get("name") or "RealDrive") or "RealDrive"
-            if d["x"] is not None:
+            # DDF path-following is EXPERIMENTAL: validated ADF/DDF grammar
+            # (from Altair's own Snet_path example) is read and instantiated
+            # by the driver, but in this deck the steering follows it with
+            # zero output and the run terminates early - confirmed even with
+            # the proven stock doublelane ADF surgically re-pointed at a DDF.
+            # Default: the runnable scenario is the (proven) speed follower;
+            # the path still powers the travel-map preview.
+            if d["x"] is not None and cfg.get("experimental_ddf"):
                 ddf_name = name + ".ddf"
                 aux = {ddf_name: drive_import.build_ddf(
                     name, d["t"], d["v_ms"], d["x"], d["y"])}
@@ -189,7 +196,22 @@ class Api:
                 aux = {}
                 adf = drive_import.build_speed_adf(name, d["t"], d["v_ms"])
             self.pending_import = {"name": name, "adf": adf, "aux": aux}
-            return {"ok": True, "stats": d["stats"]}
+
+            # downsampled preview for the travel visualizer (≤600 points)
+            import numpy as np
+            t, v = d["t"], d["v_ms"]
+            step = max(1, len(t) // 600)
+            prev = {"v_kph": [round(float(x) * 3.6, 1) for x in v[::step]]}
+            if d["x"] is not None:
+                prev["x"] = [round(float(x), 1) for x in d["x"][::step]]
+                prev["y"] = [round(float(x), 1) for x in d["y"][::step]]
+            else:
+                # no path: a straight ribbon along cumulative distance
+                s = np.concatenate([[0.0], np.cumsum(
+                    0.5 * (v[1:] + v[:-1]) * np.diff(t))])
+                prev["x"] = [round(float(x), 1) for x in s[::step]]
+                prev["y"] = [0.0] * len(prev["x"])
+            return {"ok": True, "stats": d["stats"], "preview": prev}
         except Exception as exc:
             return {"ok": False, "error": "{}: {}".format(
                 type(exc).__name__, exc)}
