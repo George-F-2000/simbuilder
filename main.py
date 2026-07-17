@@ -151,6 +151,43 @@ class Api:
                          daemon=True).start()
         return {"ok": True}
 
+    def get_results(self, force=False):
+        """Scan the runs folder and return the campaign leaderboard rows."""
+        import results
+        rows = results.scan_runs(self.settings["runs_dir"], force=bool(force))
+        return {"runs_dir": self.settings["runs_dir"], "rows": rows}
+
+    def open_path(self, path):
+        if path and os.path.exists(path):
+            os.startfile(path)
+
+    def view_mf4(self, path):
+        if path and os.path.isfile(path):
+            subprocess.Popen(self_command("--viewer", path))
+
+    def export_results_csv(self):
+        import csv as csvmod
+        import webview
+        import results
+        rows = results.scan_runs(self.settings["runs_dir"])
+        if not rows:
+            return {"ok": False}
+        dest = webview.windows[0].create_file_dialog(
+            webview.SAVE_DIALOG, save_filename="campaign_results.csv",
+            file_types=("CSV (*.csv)|*.csv",))
+        if not dest:
+            return {"ok": False}
+        dest = dest if isinstance(dest, str) else dest[0]
+        cols = ["folder", "when", "name", "vehicle", "serial", "serial_ok",
+                "ems", "cycle", "duration_s", "dist_km", "energy_kwh",
+                "wh_per_km", "soc_drop_pct", "track_rmse_kph", "jerk_rms",
+                "chatter_per_min", "v_max_kph", "error"]
+        with open(dest, "w", newline="", encoding="utf-8-sig") as fh:
+            w = csvmod.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(rows)
+        return {"ok": True, "path": dest}
+
     def run_cycle(self, cycle_name, vehicle=None):
         """Run a standard drive cycle (UDDS / HWFET) as a closed-loop
         scenario - the efficiency benchmark runs for EMS comparisons."""
