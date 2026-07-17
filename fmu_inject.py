@@ -41,21 +41,48 @@ _FULL_KEYS = ("m_spd_data", "m_max_trq", "m_map_eff_spd", "m_map_eff_trq",
               "m_eff_map")
 
 
-def _resample_full(src, n_spd=motor_gen.N_SPD, n_trq=motor_gen.N_TRQ):
+def _resample_full(src, n_spd=motor_gen.N_SPD, n_trq=motor_gen.N_TRQ,
+                   motor=None, log=None):
     """Regrid a complete uploaded motor_data dict onto the FMU's n_spd x n_trq
-    axes, honouring the file's envelope, efficiency map and regen quadrant."""
+    axes. Envelope precedence: if the motor's field ratings (peak power /
+    torque / max rpm) are set, THEY define the envelope and the file supplies
+    the efficiency surfaces only - consistent with the external-.mat deck
+    path, where the fields always build the envelope. Without usable fields
+    the file's own envelope is used verbatim."""
     spd = np.ravel(src["m_spd_data"]).astype(float)
     trq_env = np.ravel(src["m_max_trq"]).astype(float)
     eff_spd = np.ravel(src["m_map_eff_spd"]).astype(float)
     eff_trq = np.ravel(src["m_map_eff_trq"]).astype(float)
     eff = np.asarray(src["m_eff_map"], dtype=float)
 
-    w = np.linspace(0.0, float(spd.max()), n_spd)
-    t_env = np.interp(w, spd, trq_env)
-    t_grid = np.linspace(0.0, float(eff_trq.max()), n_trq)
+    p_w = float((motor or {}).get("powerKW") or 0) * 1000.0
+    t_pk = float((motor or {}).get("torqueNm") or 0)
+    rpm = float((motor or {}).get("maxRpm") or 0)
+    env_from_file = bool((motor or {}).get("envFromFile"))
+    if env_from_file and log:
+        log("    motor '{}': map file is TRUTH - using the file's measured "
+            "envelope ({:.1f} Nm / {:.0f} rpm), ratings display-only".format(
+                (motor or {}).get("name", "?"), trq_env.max(),
+                spd.max() * 60.0 / (2 * np.pi)))
+    if not env_from_file and p_w > 0 and t_pk > 0 and rpm > 0:
+        w_max = rpm * 2.0 * np.pi / 60.0
+        w = np.linspace(0.0, w_max, n_spd)
+        t_env = np.minimum(t_pk, np.divide(
+            p_w, np.maximum(w, 1e-9)))
+        t_env[0] = t_pk
+        t_grid = np.linspace(0.0, t_pk, n_trq)
+        if log and (w_max > spd.max() * 1.02 or t_pk > eff_trq.max() * 1.02):
+            log("    NOTE: field ratings exceed the file's data range "
+                "(file: {:.0f} rpm / {:.1f} Nm) - efficiency edge-"
+                "extrapolated beyond it".format(
+                    spd.max() * 60.0 / (2 * np.pi), eff_trq.max()))
+    else:
+        w = np.linspace(0.0, float(spd.max()), n_spd)
+        t_env = np.interp(w, spd, trq_env)
+        t_grid = np.linspace(0.0, float(eff_trq.max()), n_trq)
     new_eff = motor_gen.regrid(eff_spd, eff_trq, eff, w, t_grid)
 
-    t_regen = np.linspace(-float(eff_trq.max()), float(eff_trq.max()),
+    t_regen = np.linspace(-float(t_grid.max()), float(t_grid.max()),
                           2 * n_trq - 1)
     if "m_eff_map_regen" in src and "m_map_eff_trq_regen" in src:
         rtrq = np.ravel(src["m_map_eff_trq_regen"]).astype(float)
@@ -86,10 +113,14 @@ def _motor_data_for(motor, log):
         try:
             d = loadmat(p)
             if all(k in d for k in _FULL_KEYS):
-                log("    motor '{}': uploaded motor data {} regridded to {}x{}"
-                    .format(motor.get("name", "?"), os.path.basename(p),
-                            motor_gen.N_SPD, motor_gen.N_TRQ))
-                return _resample_full(d)
+                log("    motor '{}': uploaded motor data {} regridded to "
+                    "{}x{} ({})".format(
+                        motor.get("name", "?"), os.path.basename(p),
+                        motor_gen.N_SPD, motor_gen.N_TRQ,
+                        "file envelope - map is truth"
+                        if motor.get("envFromFile")
+                        else "envelope from the field ratings"))
+                return _resample_full(d, motor=motor, log=log)
         except Exception as exc:
             log("    WARNING: could not read {} ({}) - synthesising from fields"
                 .format(os.path.basename(p), exc))

@@ -24,9 +24,11 @@ function defaultVehicle() {
     motorCount: 2,
     motors: [
       { name: "Front PMSM", powerKW: 92, torqueNm: 210, maxRpm: 15000,
-        ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "" },
+        ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "",
+        envFromFile: false },
       { name: "Rear PMSM", powerKW: 65, torqueNm: 380, maxRpm: 15000,
-        ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "" },
+        ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "",
+        envFromFile: false },
     ],
     deckDefault: false,
     generateMotors: true,
@@ -63,7 +65,10 @@ function vehLoadStored() {
   } catch {}
   // backfill fields added after a vehicle was stored (shallow merge misses
   // nested motor objects)
-  (veh.motors || []).forEach(m => { if (m.effMapPath === undefined) m.effMapPath = ""; });
+  (veh.motors || []).forEach(m => {
+    if (m.effMapPath === undefined) m.effMapPath = "";
+    if (m.envFromFile === undefined) m.envFromFile = false;
+  });
   if (veh.deckDefault === undefined) veh.deckDefault = false;
   if (veh.generateMotors === undefined) veh.generateMotors = true;
   if (veh.applyMass === undefined) veh.applyMass = false;
@@ -94,6 +99,7 @@ const VEH_FIELDS = [
 const MOTOR_FIELDS = [
   ["name", false], ["powerKW", true], ["torqueNm", true], ["maxRpm", true],
   ["ratedVoltageV", true], ["ratedCurrentA", true], ["gearRatio", true],
+  ["envFromFile", false],   // checkbox: file envelope wins for this motor
 ];
 
 function bindVehicleInputs() {
@@ -252,7 +258,9 @@ function readVehicleInputs() {
     if (!veh.motors[i]) veh.motors[i] = defaultVehicle().motors[0];
     for (const [prop, isNum] of MOTOR_FIELDS) {
       const el = card.querySelector(`[data-m="${prop}"]`);
-      if (el) veh.motors[i][prop] = isNum ? (parseFloat(el.value) || 0) : el.value;
+      if (!el) continue;
+      veh.motors[i][prop] = el.type === "checkbox" ? el.checked
+        : isNum ? (parseFloat(el.value) || 0) : el.value;
     }
   });
 }
@@ -269,7 +277,9 @@ function renderMotorCards() {
       veh.motorCount === 1 ? "Motor" : (i === 0 ? "Motor 1 — front" : "Motor 2 — rear");
     for (const [prop] of MOTOR_FIELDS) {
       const el = node.querySelector(`[data-m="${prop}"]`);
-      if (el) el.value = m[prop];
+      if (!el) continue;
+      if (el.type === "checkbox") el.checked = !!m[prop];
+      else el.value = m[prop];
     }
     // efficiency map upload (⚡): native picker via the pipeline app
     const pathEl = node.querySelector(".eff-path");
