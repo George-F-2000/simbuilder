@@ -35,7 +35,44 @@ import motor_gen
 # resources/<prefix>_frnt_motor_data.mat  /  _rear_motor_data.mat  /  _motor_char.mat
 DATA_RE = re.compile(r".*_motor_data\.mat$", re.I)
 CHAR_RE = re.compile(r".*_motor_char\.mat$", re.I)
+OPT_RE = re.compile(r".*_opt_trq_ratio\.mat$", re.I)
 FMU_REF_RE = re.compile(r'(string\s*=\s*")([^"]*\.fmu)(")', re.I)
+
+
+def find_fmu_resource(deck_text, resource_re):
+    """First deck-referenced FMU whose zip contains a resource matching
+    resource_re: returns (ref match, native fmu path, [resource names]);
+    (None, None, []) when no FMU carries it."""
+    for m in FMU_REF_RE.finditer(deck_text):
+        native = m.group(2).replace("/", os.sep)
+        if not os.path.isfile(native):
+            continue
+        try:
+            with zipfile.ZipFile(native) as z:
+                names = [n for n in z.namelist() if resource_re.match(n)]
+        except (zipfile.BadZipFile, OSError):
+            continue
+        if names:
+            return m, native, names
+    return None, None, []
+
+
+def read_fmu_resource(fmu_path, name):
+    with zipfile.ZipFile(fmu_path) as z:
+        return z.read(name)
+
+
+def replace_fmu_entries(src, dest, replacements):
+    """Copy the FMU zip src -> dest replacing the named entries, preserving
+    every other entry byte-for-byte. src may equal dest (in-place rewrite of
+    the run copy: the whole zip is read into memory first)."""
+    with zipfile.ZipFile(src) as zin:
+        infos = zin.infolist()
+        blobs = {i.filename: zin.read(i.filename) for i in infos}
+    blobs.update(replacements)
+    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zout:
+        for i in infos:
+            zout.writestr(i, blobs[i.filename])
 
 _FULL_KEYS = ("m_spd_data", "m_max_trq", "m_map_eff_spd", "m_map_eff_trq",
               "m_eff_map")
