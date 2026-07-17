@@ -30,6 +30,13 @@ next to RUN IN MOTIONSOLVE ("runs vehicle: <name>") is the reminder.
 **Scenario Builder** - phase-based maneuver definition, point-mass preview,
 live .adf generation (unchanged).
 
+**🏁 Run deck as-is (model validation)** — the master toggle at the top of
+the Vehicle card. When on, EVERY ⚡ override below is skipped and the model
+runs exactly as exported from MotionView (only the scenario, path healing
+and XML safety touch the run). Use it when overlaying the stock model on
+real drive data; the run manifest states the mode and the serial changes
+with it.
+
 **Vehicle Builder** - the vehicle's spec sheet plus the pipeline's
 per-run overrides, with two honestly-labelled kinds of fields:
 
@@ -81,7 +88,7 @@ the number with the app).
 | MF4 viewer | Imported from `..\CSV to MDF Converter\mf4-viewer-app\viewer.py` — the canonical copy ([mf4-viewer repo](https://github.com/George-F-2000/mf4-viewer)), so viewer improvements arrive here automatically at the next exe build. |
 | `plt_gui.py` | Copy of plt-to-mf4-converter's `app.py` (the converter window). |
 | `plt_reader.py`, `avl_extract.py`, `converter.py` | Copies from [plt-to-mf4-converter](https://github.com/George-F-2000/plt-to-mf4-converter); this repo's `converter.py` additionally writes the VehicleSerial channel. Re-sync deliberately, not blindly. |
-| `settings.json` | Created on first change (gitignored — machine-local paths). Solver deck, motionsolve.bat, runs folder, pack voltage. |
+| `settings.json` | Created on first change (gitignored). Solver deck, motionsolve.bat, runs folder, pack voltage. **Per-machine**: each machine's choices live under `machines["<user>@<host>"]` in the one OneDrive-synced file, so home and lab never overwrite each other; missing paths from the other machine are healed (user profile and Altair version substitution). |
 
 ## Using it
 
@@ -191,7 +198,9 @@ left wins); CSV export for publication plots.
 
 Scenario tab → **Import real drive**: pick an MF4 logged in the actual
 car, map the channels (speed + unit; optional steering source), and the
-drive becomes a runnable scenario. Steering/path sources:
+drive becomes a runnable scenario. When the run finishes, the viewer opens
+with BOTH the sim result and the source real MF4 preloaded — overlay
+VehicleSpeed (and friends) directly to judge the model. Steering/path sources:
 - **None** — speed-only, straight line (any drive length).
 - **Yaw rate** — dead-reckoned path (∫yaw, ∫v); great for maneuvers of
   minutes, drifts over long drives.

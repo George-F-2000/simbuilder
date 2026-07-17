@@ -203,7 +203,8 @@ class Api:
             else:
                 aux = {}
                 adf = drive_import.build_speed_adf(name, d["t"], d["v_ms"])
-            self.pending_import = {"name": name, "adf": adf, "aux": aux}
+            self.pending_import = {"name": name, "adf": adf, "aux": aux,
+                                   "src": cfg["path"]}
 
             # downsampled preview for the travel visualizer (≤600 points)
             import numpy as np
@@ -236,7 +237,8 @@ class Api:
             self.set_voltage(vehicle["pack_voltage"])
         threading.Thread(target=self._worker,
                          args=(pend["name"], pend["adf"], vehicle,
-                               pend["aux"]), daemon=True).start()
+                               pend["aux"], pend.get("src")),
+                         daemon=True).start()
         return {"ok": True}
 
     def get_results(self, force=False):
@@ -377,7 +379,11 @@ class Api:
             self.pipeline.kill_process_tree(proc.pid, log=self._log)
         return {"ok": True}
 
-    def _worker(self, scenario_name, adf_text, vehicle=None, aux_files=None):
+    def _worker(self, scenario_name, adf_text, vehicle=None, aux_files=None,
+                also_view=None):
+        # also_view: extra MF4 opened alongside the result (the imported real
+        # drive) so the sim overlays directly on the measurement it mimics
+        extra = [also_view] if also_view and os.path.isfile(also_view) else []
         self.dir_holder["dir"] = None
         try:
             self._status("running")
@@ -387,7 +393,7 @@ class Api:
                 proc_holder=self.proc_holder, vehicle=vehicle,
                 aux_files=aux_files, dir_holder=self.dir_holder,
                 viewer_launcher=lambda path: subprocess.Popen(
-                    self_command("--viewer", path)))
+                    self_command("--viewer", path, *extra)))
             self.last_run_dir, self.last_mf4 = run_dir, mf4
             self._js("msPipe.done(true, {}, {})".format(
                 json.dumps(mf4), json.dumps(run_dir)))
