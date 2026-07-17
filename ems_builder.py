@@ -177,6 +177,54 @@ def build_ratio_map(strategy, deck_map_path, motors=None, params=None, log=print
     return out
 
 
+def apply_ems_any(ems, deck_text, run_dir, motors, log=print):
+    """apply_ems for BOTH deck styles. External opt_trq_ratio .mat in the run
+    folder (doublelane): shadow the file. Map inside the motor FMU (LYRIQ):
+    extract its axes, rebuild r_ch, and inject it back into the run's FMU
+    copy (making + re-pointing the copy if motor injection didn't already).
+    Returns (strategy applied or None, possibly-updated deck_text)."""
+    if not ems or not ems.get("enabled"):
+        return None, deck_text
+    strategy = ems.get("strategy", "deck_default")
+    if strategy == "deck_default":
+        log("  EMS: deck default map (builder off)")
+        return None, deck_text
+
+    if any("opt_trq_ratio" in f.lower() for f in os.listdir(run_dir)):
+        return apply_ems(ems, run_dir, motors, log=log), deck_text
+
+    import io
+    import fmu_inject
+    ref, native, names = fmu_inject.find_fmu_resource(deck_text,
+                                                      fmu_inject.OPT_RE)
+    if ref is None:
+        log("  WARNING: no torque-split map found (neither an external "
+            "opt_trq_ratio .mat nor one inside a deck FMU) - EMS skipped")
+        return None, deck_text
+    try:
+        src = io.BytesIO(fmu_inject.read_fmu_resource(native, names[0]))
+        m = build_ratio_map(strategy, src, motors=motors,
+                            params=ems.get("params"), log=log)
+    except Exception as exc:
+        log("  WARNING: EMS strategy '{}' failed ({}) - using deck default"
+            .format(strategy, exc))
+        return None, deck_text
+    buf = io.BytesIO()
+    savemat(buf, m)
+    dest = os.path.join(run_dir, os.path.basename(native))
+    fmu_inject.replace_fmu_entries(native, dest, {names[0]: buf.getvalue()})
+    if os.path.normpath(native) != os.path.normpath(dest):
+        deck_text = deck_text.replace(
+            ref.group(0),
+            ref.group(1) + dest.replace("\\", "/") + ref.group(3), 1)
+        log("  EMS: motor FMU copied into the run folder and re-pointed")
+    r = m["r_ch"]
+    log("  EMS: '{}' split map injected into {} (r_ch {:.2f}..{:.2f}, "
+        "mean {:.2f})".format(strategy, os.path.basename(dest),
+                              r.min(), r.max(), r.mean()))
+    return strategy, deck_text
+
+
 def apply_ems(ems, run_dir, motors, log=print):
     """Generate and write the split map into the run folder, shadowing the
     healed deck default. `ems` is {enabled, strategy, params}. No-op when

@@ -502,10 +502,13 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
 
     # energy-management strategy (⚡): regenerate the torque-split map
     # (optimal_torque_ratio_map). Verified consumed by the FMU at vcu_type=4.
+    # Reaches the map wherever it lives: external .mat (doublelane) or
+    # inside the motor FMU (LYRIQ).
     if (vehicle.get("ems") or {}).get("enabled"):
         import ems_builder
         motors = (spec.get("motors") or [])[:int(spec.get("motorCount") or 1)]
-        ems_builder.apply_ems(vehicle["ems"], run_dir, motors, log=log)
+        _, deck_text = ems_builder.apply_ems_any(
+            vehicle["ems"], deck_text, run_dir, motors, log=log)
 
     spec = vehicle.get("spec")
     if spec:
