@@ -509,6 +509,10 @@
       <button type="button" class="ghost pick-eff" title="Upload a measured map: CSV grid (first row = torque Nm breakpoints, first column = speed rpm, cells = efficiency) or a .mat with m_eff_map">Upload…</button>
       <button type="button" class="ghost reset-eff hidden">Reset</button>
     </div>
+    <label class="apply-check"><input type="checkbox" data-m="envFromFile">
+      Map file is truth — when the uploaded .mat is full motor data, use ITS
+      measured torque envelope and speed range verbatim (the kW / N·m / rpm
+      ratings above become display-only for this motor)</label>
   </div>
 </template>
 
