@@ -241,6 +241,19 @@ details.adv[open] summary { margin-bottom: 6px; }
 }
 .apply-check input { margin-right: 6px; vertical-align: -2px; }
 
+/* the "run deck as-is" master switch: visually a mode, not a field */
+.apply-check.deck-asis {
+  border: 1px solid #e0b84c;
+  background: #fdf6e3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 4px 0 12px;
+}
+body.dark .apply-check.deck-asis {
+  border-color: #6b5a23;
+  background: #2e2a1a;
+}
+
 .ems-explain { margin: 6px 0 4px; }
 .ems-explain > summary {
   cursor: pointer;

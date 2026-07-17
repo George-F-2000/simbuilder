@@ -28,6 +28,7 @@ function defaultVehicle() {
       { name: "Rear PMSM", powerKW: 65, torqueNm: 380, maxRpm: 15000,
         ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "" },
     ],
+    deckDefault: false,
     generateMotors: true,
     applyMass: false,
     ems: { enabled: false, strategy: "loss_optimal", threshold: 250 },
@@ -63,6 +64,7 @@ function vehLoadStored() {
   // backfill fields added after a vehicle was stored (shallow merge misses
   // nested motor objects)
   (veh.motors || []).forEach(m => { if (m.effMapPath === undefined) m.effMapPath = ""; });
+  if (veh.deckDefault === undefined) veh.deckDefault = false;
   if (veh.generateMotors === undefined) veh.generateMotors = true;
   if (veh.applyMass === undefined) veh.applyMass = false;
   if (!veh.ems) veh.ems = { enabled: false, strategy: "loss_optimal", threshold: 250 };
@@ -100,6 +102,7 @@ function bindVehicleInputs() {
   $("#vhSuspF").value = veh.suspF;
   $("#vhSuspR").value = veh.suspR;
   $("#vhMotorCount").value = String(veh.motorCount);
+  $("#vhDeckDefault").checked = !!veh.deckDefault;
   $("#vhGenMotors").checked = !!veh.generateMotors;
   $("#vhApplyMass").checked = !!veh.applyMass;
   $("#vhEmsEnable").checked = !!veh.ems.enabled;
@@ -233,6 +236,7 @@ function readVehicleInputs() {
   veh.suspF = $("#vhSuspF").value;
   veh.suspR = $("#vhSuspR").value;
   veh.motorCount = parseInt($("#vhMotorCount").value, 10) || 1;
+  veh.deckDefault = $("#vhDeckDefault").checked;
   veh.generateMotors = $("#vhGenMotors").checked;
   veh.applyMass = $("#vhApplyMass").checked;
   veh.ems = {
@@ -501,8 +505,10 @@ function renderOverrides(state) {
 function updateRunChip() {
   const chip = $("#runVehChip");
   if (!chip) return;
-  chip.textContent = "🚗 runs vehicle: " + (veh.name || "unnamed") +
-    " · " + (veh.serial || "") + " ⚡";
+  chip.textContent = veh.deckDefault
+    ? "🏁 runs DECK AS-IS (no vehicle overrides) · " + (veh.serial || "")
+    : "🚗 runs vehicle: " + (veh.name || "unnamed") +
+      " · " + (veh.serial || "") + " ⚡";
   if (window.pywebview) chip.classList.remove("hidden");
   const nameEl = $("#pmInheritName");
   if (nameEl) nameEl.textContent = veh.name || "unnamed";
@@ -530,6 +536,7 @@ function vehiclePayload() {
   veh.serial = computeSerial(veh);
   return {
     spec: veh,
+    deck_default: !!veh.deckDefault,
     tire_path: veh.tirePath || null,
     mat_overrides: veh.matOverrides,
     pack_voltage: veh.packVoltage,

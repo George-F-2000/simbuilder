@@ -82,21 +82,56 @@ def _heal_user_path(path):
     return path
 
 
-def load_settings():
-    settings = dict(DEFAULT_SETTINGS)
+def machine_key():
+    """One settings section per machine, so home and lab stop overwriting
+    each other's paths through OneDrive."""
+    user = os.environ.get("USERNAME") or os.environ.get("USER") or "user"
+    host = os.environ.get("COMPUTERNAME") or "host"
+    return "{}@{}".format(user, host)
+
+
+def _read_settings_file():
     try:
         with open(SETTINGS_PATH, encoding="utf-8") as fh:
-            settings.update(json.load(fh))
+            data = json.load(fh)
+            return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
-        pass   # first launch (or broken file): defaults, saved on next change
+        return {}   # first launch (or broken file)
+
+
+def load_settings():
+    """Defaults <- flat legacy keys (whichever machine saved last; healed)
+    <- this machine's own section. A machine that has saved at least once
+    always gets exactly what it chose; a machine that hasn't falls back to
+    the other machine's (healed) paths."""
+    data = _read_settings_file()
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update({k: v for k, v in data.items() if k != "machines"})
+    mine = (data.get("machines") or {}).get(machine_key())
+    if isinstance(mine, dict):
+        settings.update(mine)
     for key in ("deck", "runs_dir", "motionsolve", "viewer"):
         settings[key] = _heal_user_path(settings.get(key))
+    ms = settings.get("motionsolve")
+    if isinstance(ms, str) and ms and not os.path.exists(ms):
+        settings["motionsolve"] = _heal_altair_version(ms) or ms
     return settings
 
 
 def save_settings(settings):
+    """Write this machine's section without touching the other machines'.
+    The flat top-level keys are kept as a mirror of the last saver, so
+    older exe builds (which read only the flat keys) still work."""
+    data = _read_settings_file()
+    machines = data.get("machines")
+    if not isinstance(machines, dict):
+        machines = {}
+    flat = {k: v for k, v in settings.items() if k != "machines"}
+    machines[machine_key()] = flat
+    out = dict(flat)
+    out["machines"] = machines
     with open(SETTINGS_PATH, "w", encoding="utf-8") as fh:
-        json.dump(settings, fh, indent=2)
+        json.dump(out, fh, indent=2)
 
 
 def safe_name(name):
@@ -111,7 +146,8 @@ def safe_name(name):
 # a token inside a string="..." value that looks like a file path:
 # optional drive or ../ climb, then something with an extension we care about
 PATH_TOKEN = re.compile(
-    r'(?:[A-Za-z]:/|(?:\.\./)+)[^";\r\n]+?\.(?:fmu|mat|tir|rdf|csv|txt|h3d)',
+    r'(?:[A-Za-z]:/|(?:\.\./)+)[^";\r\n]+?'
+    r'\.(?:fmu|mat|tir|rdf|csv|txt|h3d|aae|ddf|sdf|dll)',
     re.IGNORECASE)
 
 ADF_REF = re.compile(
@@ -134,6 +170,59 @@ def xml_escape_amps(deck_text, log=None):
     return fixed
 
 
+def _heal_altair_version(path):
+    """A deck exported against one Altair install (e.g. the lab's 2025.1)
+    references FMUs/road files under ...\\Altair\\2025.1\\...; this machine
+    may have 2025 or 2024.1 instead. If the stored path is missing but a
+    sibling installed version carries the same file, use that one."""
+    m = re.match(r"^(.*[\\/]Altair)[\\/]([^\\/]+)([\\/].*)$", path, re.I)
+    if not m:
+        return None
+    root, stored_ver, rest = m.groups()
+    if not os.path.isdir(root):
+        return None
+    try:
+        versions = sorted(os.listdir(root), reverse=True)
+    except OSError:
+        return None
+    for ver in versions:
+        if ver == stored_ver:
+            continue
+        candidate = os.path.normpath(root + os.sep + ver + rest)
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def neutralize_gui_usersubs(deck_text, log):
+    """A deck exported after 'run with animation' in MotionView carries a
+    Sensor_Event bound to modelanimation.dll (SENSUB) - the GUI animation
+    hook. Headless, that dll refuses to initialize ('found but not
+    successfully loaded') and the whole run dies in usersub init - on any
+    machine. Replace the sensor with an EXPRESSION sensor that never trips:
+    same id (stays referenceable), zero effect on the physics."""
+    def repl(m):
+        block = m.group(0)
+        if "modelanimation" not in block.lower():
+            return block
+        idm = re.search(r'\bid\s*=\s*"(\d+)"', block)
+        sid = idm.group(1) if idm else "0"
+        log("  neutralized GUI animation sensor (Sensor_Event {}) - "
+            "modelanimation.dll is MotionView-only and cannot load in a "
+            "headless run".format(sid))
+        return ('<Sensor_Event\n'
+                '     id                  = "' + sid + '"\n'
+                '     label               = "animation sensor '
+                '(neutralized for headless run)"\n'
+                '     type                = "EXPRESSION"\n'
+                '     expr                = "1"\n'
+                '     compare             = "EQ"\n'
+                '     value               = "0."\n'
+                '     error_tol           = "0.001"\n'
+                '  />')
+    return re.sub(r"<Sensor_Event\b.*?/>", repl, deck_text, flags=re.S)
+
+
 def patch_deck(deck_text, source_dir, run_dir, log):
     """Rewrite every file reference in the deck so it resolves from run_dir.
     Returns the patched text. Missing files are logged as warnings, not
@@ -147,6 +236,11 @@ def patch_deck(deck_text, source_dir, run_dir, log):
             resolved = os.path.normpath(os.path.join(source_dir, token))
             if os.path.exists(resolved):
                 return resolved.replace("\\", "/")
+            alt = _heal_altair_version(resolved)
+            if alt:
+                log("  healed Altair version: {} -> {}".format(
+                    os.path.basename(alt), alt))
+                return alt.replace("\\", "/")
             log("  WARNING: relative ref not found: {} -> {}".format(
                 token, resolved))
             return token
@@ -163,6 +257,10 @@ def patch_deck(deck_text, source_dir, run_dir, log):
             log("  healed stale path: {} (copied {} into run folder)".format(
                 token, base))
             return dest.replace("\\", "/")
+        alt = _heal_altair_version(native)
+        if alt:
+            log("  healed Altair version: {} -> {}".format(base, alt))
+            return alt.replace("\\", "/")
         log("  WARNING: referenced file not found anywhere: " + token)
         return token
 
@@ -313,6 +411,25 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
     if not vehicle:
         return deck_text
 
+    # DECK AS-IS mode (model validation): the deck runs exactly as exported
+    # from MotionView - every ⚡ override is skipped. Only the scenario ADF,
+    # path healing and XML escaping touch the run. vehicle.json is still
+    # written so the run records which car the spec sheet described.
+    if vehicle.get("deck_default"):
+        spec0 = vehicle.get("spec") or {}
+        log("  ============ VEHICLE: DECK AS-IS ============")
+        log("  {}   {}".format(spec0.get("name", "unnamed"),
+                               spec0.get("serial", "")))
+        log("  ALL vehicle overrides skipped (motors, gearing, tire, mass,")
+        log("  EMS, .mat overrides) - the model runs exactly as exported.")
+        log("  =============================================")
+        if spec0:
+            with open(os.path.join(run_dir, "vehicle.json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump(spec0, fh, indent=2)
+            log("  vehicle spec recorded: vehicle.json")
+        return deck_text
+
     # vehicle manifest: what car this run actually uses, stated up front
     spec0 = vehicle.get("spec") or {}
     if spec0:
@@ -430,7 +547,20 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
             "that uses Altair Driver?")
     adf_name = os.path.basename(adf_match.group(1))
 
+    # The deck may reference the ADF wherever MotionView exported it (the
+    # LYRIQ deck says '../../../Custom Events/x.adf'). OUR ADF is written
+    # into the run folder, and the solver runs with cwd = run folder - so
+    # re-point the reference at the bare filename. Without this the solver
+    # reads (or fails to find) the ORIGINAL scenario instead of ours.
+    if adf_match.group(1) != adf_name:
+        deck_text = deck_text.replace(
+            adf_match.group(0),
+            adf_match.group(0).replace(adf_match.group(1), adf_name), 1)
+        log("  ADF reference re-pointed: {} -> {}".format(
+            adf_match.group(1), adf_name))
+
     deck_text = patch_deck(deck_text, source_dir, run_dir, log)
+    deck_text = neutralize_gui_usersubs(deck_text, log)
     deck_text = apply_vehicle(vehicle, deck_text, source_dir, run_dir, log)
     deck_text = xml_escape_amps(deck_text, log)   # never ship malformed XML
 
@@ -481,6 +611,30 @@ def total_sim_time(adf_text):
 TIME_LINE = re.compile(r"^\s*Time=([0-9.Ee+-]+);")
 
 
+def _solver_env(run_dir, deck_name):
+    """Usersub dlls referenced by the deck with absolute paths (the LYRIQ's
+    modelanimation.dll in hwdesktop\\hw\\bin\\win64) drag in dependencies
+    from their own folder. Under MotionView that folder is on PATH; in our
+    headless subprocess it isn't, and the usersub load fails even though
+    the dll exists. Put every deck-referenced dll's folder on the child's
+    PATH."""
+    env = os.environ.copy()
+    try:
+        with open(os.path.join(run_dir, deck_name), encoding="utf-8",
+                  errors="replace") as fh:
+            text = fh.read()
+    except OSError:
+        return env
+    dirs = []
+    for m in re.finditer(r'"([A-Za-z]:[^"]+?\.dll)"', text, re.IGNORECASE):
+        d = os.path.dirname(m.group(1).replace("/", os.sep))
+        if os.path.isdir(d) and d not in dirs:
+            dirs.append(d)
+    if dirs:
+        env["PATH"] = os.pathsep.join(dirs + [env.get("PATH", "")])
+    return env
+
+
 def run_motionsolve(settings, run_dir, deck_name, log,
                     progress=None, sim_total=None, proc_holder=None):
     """Run the solver, streaming its output. `progress(fraction, text)` is
@@ -494,7 +648,7 @@ def run_motionsolve(settings, run_dir, deck_name, log,
     log("Launching MotionSolve (headless - no window will appear)...")
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     proc = subprocess.Popen(
-        [bat, deck_name], cwd=run_dir,
+        [bat, deck_name], cwd=run_dir, env=_solver_env(run_dir, deck_name),
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, errors="replace", bufsize=1,
         creationflags=creationflags)
