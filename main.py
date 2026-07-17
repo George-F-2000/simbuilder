@@ -440,7 +440,12 @@ def run_pipeline_window():
         "SimBuilder — MotionSolve Pipeline",
         index, js_api=Api(),
         width=1500, height=900, min_size=(1100, 700))
-    webview.start()
+    # pywebview >= 4 defaults to private_mode=True: localStorage (stored
+    # vehicles, scenarios, theme) silently evaporates on every app restart.
+    # Persist it in a stable machine-local profile instead.
+    storage = os.path.join(
+        os.environ.get("LOCALAPPDATA") or BASE, "SimBuilder")
+    webview.start(private_mode=False, storage_path=storage)
 
 
 # ----------------------------------------------------------------------------
