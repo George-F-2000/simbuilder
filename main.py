@@ -151,6 +151,25 @@ class Api:
                          daemon=True).start()
         return {"ok": True}
 
+    def run_cycle(self, cycle_name, vehicle=None):
+        """Run a standard drive cycle (UDDS / HWFET) as a closed-loop
+        scenario - the efficiency benchmark runs for EMS comparisons."""
+        if self.running:
+            return {"ok": False, "error": "A run is already in progress."}
+        import drive_cycles
+        try:
+            adf = drive_cycles.build_cycle_adf(cycle_name)
+        except Exception as exc:
+            return {"ok": False, "error": "cycle generation failed: " + str(exc)}
+        self.running = True
+        self.stop_requested = False
+        if vehicle and vehicle.get("pack_voltage"):
+            self.set_voltage(vehicle["pack_voltage"])
+        threading.Thread(target=self._worker,
+                         args=(cycle_name.upper(), adf, vehicle),
+                         daemon=True).start()
+        return {"ok": True}
+
     def run_batch(self, runs, vehicle=None):
         """Run several scenarios back-to-back (the RUN AVL CYCLE button):
         each gets its own run folder + MF4; no viewer per run; the runs
