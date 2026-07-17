@@ -56,6 +56,14 @@ def self_command(*args):
 #  Pipeline window (default mode)
 # ----------------------------------------------------------------------------
 
+def file_filter(spec):
+    """pywebview >= 5 validates file filters strictly ('Name (*.ext)') and
+    raises on the old WinForms-style 'Name (*.ext)|*.ext' - which kills the
+    dialog silently (the JS promise rejects, no popup). Accept both by
+    dropping the pipe tail."""
+    return spec.split("|")[0].strip()
+
+
 def web_index():
     if getattr(sys, "frozen", False):
         return os.path.join(sys._MEIPASS, "web", "index.html")
@@ -70,6 +78,7 @@ class Api:
         self.running = False
         self.stop_requested = False
         self.proc_holder = {"proc": None}
+        self.dir_holder = {"dir": None}
         self.last_run_dir = None
         self.last_mf4 = None
 
@@ -107,7 +116,7 @@ class Api:
         import webview
         result = webview.windows[0].create_file_dialog(
             webview.OPEN_DIALOG,
-            file_types=("MotionSolve deck (*.xml)|*.xml", "All files (*.*)|*.*"))
+            file_types=("MotionSolve deck (*.xml)", "All files (*.*)"))
         if result:
             self.settings["deck"] = result[0]
             self.pipeline.save_settings(self.settings)
@@ -135,7 +144,7 @@ class Api:
         import webview
         result = webview.windows[0].create_file_dialog(
             webview.OPEN_DIALOG,
-            file_types=(filter_spec, "All files (*.*)|*.*"))
+            file_types=(file_filter(filter_spec), "All files (*.*)"))
         return result[0] if result else None
 
     def run_scenario(self, scenario_name, adf_text, vehicle=None):
@@ -159,8 +168,7 @@ class Api:
         import drive_import
         result = webview.windows[0].create_file_dialog(
             webview.OPEN_DIALOG,
-            file_types=("Measurement (*.mf4;*.mdf)|*.mf4;*.mdf",
-                        "All files (*.*)|*.*"))
+            file_types=("Measurement (*.mf4;*.mdf)", "All files (*.*)"))
         if not result:
             return {"ok": False}
         path = result[0]
@@ -254,7 +262,7 @@ class Api:
             return {"ok": False}
         dest = webview.windows[0].create_file_dialog(
             webview.SAVE_DIALOG, save_filename="campaign_results.csv",
-            file_types=("CSV (*.csv)|*.csv",))
+            file_types=("CSV (*.csv)",))
         if not dest:
             return {"ok": False}
         dest = dest if isinstance(dest, str) else dest[0]
@@ -321,14 +329,18 @@ class Api:
                     self._progress((_base + (frac or 0.0)) / n,
                                    "run {}/{} — {}".format(i + 1, n, text))
 
+                self.dir_holder["dir"] = None
                 try:
                     run_dir, mf4 = self.pipeline.run_scenario(
                         self.settings, r["name"], r["adf"], log=self._log,
                         progress=prog, proc_holder=self.proc_holder,
-                        vehicle=vehicle, viewer_launcher=False)
+                        vehicle=vehicle, viewer_launcher=False,
+                        dir_holder=self.dir_holder)
                     self.last_run_dir, self.last_mf4 = run_dir, mf4
                     ok += 1
                 except Exception as exc:
+                    self.last_run_dir = (self.dir_holder.get("dir")
+                                         or self.last_run_dir)
                     if self.stop_requested:
                         self._log("Run stopped by user.")
                         continue   # loop breaks at the top
@@ -366,13 +378,14 @@ class Api:
         return {"ok": True}
 
     def _worker(self, scenario_name, adf_text, vehicle=None, aux_files=None):
+        self.dir_holder["dir"] = None
         try:
             self._status("running")
             run_dir, mf4 = self.pipeline.run_scenario(
                 self.settings, scenario_name, adf_text,
                 log=self._log, progress=self._progress,
                 proc_holder=self.proc_holder, vehicle=vehicle,
-                aux_files=aux_files,
+                aux_files=aux_files, dir_holder=self.dir_holder,
                 viewer_launcher=lambda path: subprocess.Popen(
                     self_command("--viewer", path)))
             self.last_run_dir, self.last_mf4 = run_dir, mf4
@@ -384,6 +397,9 @@ class Api:
                 self._status("stopped")
             else:
                 self._log("ERROR: {}: {}".format(type(exc).__name__, exc))
+            # a run that failed mid-setup still made its folder - expose it so
+            # "Open run folder" works and the user can read the solver log
+            self.last_run_dir = self.dir_holder.get("dir") or self.last_run_dir
             self._js("msPipe.done(false, null, {})".format(
                 json.dumps(self.last_run_dir)))
         finally:
