@@ -47,6 +47,24 @@ let adfText = ""; // current generated .adf (plain text, used by copy/download)
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+/* ---------------- dark mode (applied ASAP to avoid a light flash) -------- */
+(function () {
+  const dark = localStorage.getItem("simbuilder.theme") === "dark";
+  if (dark) document.body.classList.add("dark");
+  window.addEventListener("DOMContentLoaded", () => {
+    const b = document.getElementById("btnTheme");
+    const paint = () => b.textContent =
+      document.body.classList.contains("dark") ? "☀️" : "🌙";
+    b.onclick = () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("simbuilder.theme",
+        document.body.classList.contains("dark") ? "dark" : "light");
+      paint();
+    };
+    paint();
+  });
+})();
+
 function bindScenarioInputs() {
   $("#pmInherit").checked = sc.preview.inherit !== false;   // default on
   $("#scName").value = sc.name;
