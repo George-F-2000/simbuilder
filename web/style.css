@@ -470,3 +470,42 @@ canvas { width: 100%; display: block; margin-bottom: 8px; }
   margin-right: 5px; vertical-align: middle;
 }
 #resBar, #resScatter { width: 100%; height: auto; display: block; margin-bottom: 8px; }
+
+/* ---------- dark mode (toggle in the header, persisted) ---------- */
+body.dark {
+  --bg: #14181d;
+  --card: #1d232b;
+  --ink: #d7dee6;
+  --muted: #8a97a5;
+  --accent: #4aa3c7;
+  --accent-ink: #0d1218;
+  --line: #313a45;
+  --warn-bg: #3a3320;
+  --warn-ink: #e6c15c;
+}
+body.dark .setup-path { background: #262e38; color: #c3ccd6; }
+body.dark .setup-path.missing { background: #3a2422; color: #e08a80; }
+body.dark input, body.dark select, body.dark textarea {
+  background: #262e38; color: #d7dee6; border-color: #3b4653;
+}
+body.dark button.ghost { color: var(--accent); border-color: var(--accent); }
+body.dark #adfOut, body.dark #runLog { background: #0d1116; }
+body.dark #resTable th { background: #262e38; color: #c3ccd6; }
+body.dark #resTable td { border-top-color: #313a45; }
+body.dark #resTable tr:hover td { background: #232b34; }
+body.dark .stat-row { border-bottom-color: #313a45; }
+body.dark .stat-k { color: #8a97a5; }
+body.dark .stat-v { color: #d7dee6; }
+body.dark .apply-check, body.dark .volt-label, body.dark .slider-label,
+body.dark .eff-label, body.dark .setup-label { color: #b6c0cb; }
+body.dark .badge.spec { background: #2a323c; color: #9aa5b1; }
+body.dark .badge.sim { background: #1e3325; color: #6fcf8c; }
+body.dark .veh-chip { background: #1e3325; color: #6fcf8c; border-color: #2c4a36; }
+body.dark #emsLearnBody p { color: #c3ccd6; }
+body.dark #emsLearnBody code { background: #262e38; }
+body.dark .tab { color: #8a97a5; }
+body.dark .tab.active, body.dark .tab:hover { color: var(--accent); }
+/* canvases draw dark text in JS - keep them on a light panel so every
+   chart/preview label stays readable in dark mode */
+body.dark canvas { background: #eef1f5; border-radius: 8px; }
+body.dark #carSvg { background: #eef1f5; border-radius: 8px; }
