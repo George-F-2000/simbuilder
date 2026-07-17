@@ -340,8 +340,11 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
     return deck_text
 
 
-def prepare_run(settings, scenario_name, adf_text, log, vehicle=None):
-    """Set up a self-contained run folder. Returns (run_dir, deck_name)."""
+def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
+                aux_files=None):
+    """Set up a self-contained run folder. Returns (run_dir, deck_name).
+    aux_files: {filename: text} written next to the ADF (e.g. the .ddf
+    path/speed companion of an imported real drive)."""
     deck_src = settings["deck"]
     if not os.path.isfile(deck_src):
         raise FileNotFoundError("Solver deck not found: " + deck_src)
@@ -374,6 +377,12 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None):
               newline="\n") as fh:
         fh.write(adf_text)
     log("Scenario written as {} (the name the deck references)".format(adf_name))
+
+    for fname, text in (aux_files or {}).items():
+        with open(os.path.join(run_dir, os.path.basename(fname)), "w",
+                  encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        log("  companion file written: " + os.path.basename(fname))
 
     # .nam companion: comes from the MotionView export, lists the model's
     # request names/units, does not depend on the scenario. Renamed to the
@@ -517,7 +526,8 @@ def launch_viewer(settings, mf4_path, log):
 
 
 def run_scenario(settings, scenario_name, adf_text, log, progress=None,
-                 proc_holder=None, viewer_launcher=None, vehicle=None):
+                 proc_holder=None, viewer_launcher=None, vehicle=None,
+                 aux_files=None):
     """The full sequence. Returns (run_dir, mf4_path). Raises on failure.
 
     progress(fraction 0..1 or None, text) drives the UI progress bar;
@@ -533,7 +543,7 @@ def run_scenario(settings, scenario_name, adf_text, log, progress=None,
     t0 = time.time()
     report(None, "preparing run folder…")
     run_dir, deck_name = prepare_run(settings, scenario_name, adf_text, log,
-                                     vehicle=vehicle)
+                                     vehicle=vehicle, aux_files=aux_files)
     report(0.0, "starting MotionSolve…")
     plt_path = run_motionsolve(settings, run_dir, deck_name, log,
                                progress=progress,

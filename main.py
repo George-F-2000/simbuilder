@@ -28,6 +28,7 @@ whole tree.
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -149,6 +150,63 @@ class Api:
         threading.Thread(target=self._worker,
                          args=(scenario_name, adf_text, vehicle),
                          daemon=True).start()
+        return {"ok": True}
+
+    def import_drive_pick(self):
+        """Pick a logged MF4 (the real car) and list its channels for the
+        importer's channel-mapping UI."""
+        import webview
+        import drive_import
+        result = webview.windows[0].create_file_dialog(
+            webview.OPEN_DIALOG,
+            file_types=("Measurement (*.mf4;*.mdf)|*.mf4;*.mdf",
+                        "All files (*.*)|*.*"))
+        if not result:
+            return {"ok": False}
+        path = result[0]
+        try:
+            return {"ok": True, "path": path,
+                    "channels": drive_import.list_channels(path)}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def import_drive_build(self, cfg):
+        """Extract the drive per the channel mapping and build the scenario
+        (ADF, plus a DDF companion when a path source is chosen). Stored as
+        pending until run_imported()."""
+        import drive_import
+        try:
+            d = drive_import.extract_drive(cfg["path"], cfg)
+            name = re.sub(r"[^\w\-]+", "_",
+                          cfg.get("name") or "RealDrive") or "RealDrive"
+            if d["x"] is not None:
+                ddf_name = name + ".ddf"
+                aux = {ddf_name: drive_import.build_ddf(
+                    name, d["t"], d["v_ms"], d["x"], d["y"])}
+                adf = drive_import.build_path_adf(name, ddf_name,
+                                                  d["t"], d["v_ms"])
+            else:
+                aux = {}
+                adf = drive_import.build_speed_adf(name, d["t"], d["v_ms"])
+            self.pending_import = {"name": name, "adf": adf, "aux": aux}
+            return {"ok": True, "stats": d["stats"]}
+        except Exception as exc:
+            return {"ok": False, "error": "{}: {}".format(
+                type(exc).__name__, exc)}
+
+    def run_imported(self, vehicle=None):
+        if self.running:
+            return {"ok": False, "error": "A run is already in progress."}
+        pend = getattr(self, "pending_import", None)
+        if not pend:
+            return {"ok": False, "error": "Import a drive first."}
+        self.running = True
+        self.stop_requested = False
+        if vehicle and vehicle.get("pack_voltage"):
+            self.set_voltage(vehicle["pack_voltage"])
+        threading.Thread(target=self._worker,
+                         args=(pend["name"], pend["adf"], vehicle,
+                               pend["aux"]), daemon=True).start()
         return {"ok": True}
 
     def get_results(self, force=False):
@@ -285,13 +343,14 @@ class Api:
             self.pipeline.kill_process_tree(proc.pid, log=self._log)
         return {"ok": True}
 
-    def _worker(self, scenario_name, adf_text, vehicle=None):
+    def _worker(self, scenario_name, adf_text, vehicle=None, aux_files=None):
         try:
             self._status("running")
             run_dir, mf4 = self.pipeline.run_scenario(
                 self.settings, scenario_name, adf_text,
                 log=self._log, progress=self._progress,
                 proc_holder=self.proc_holder, vehicle=vehicle,
+                aux_files=aux_files,
                 viewer_launcher=lambda path: subprocess.Popen(
                     self_command("--viewer", path)))
             self.last_run_dir, self.last_mf4 = run_dir, mf4

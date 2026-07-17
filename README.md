@@ -186,3 +186,22 @@ between `vehicle.json` and the MF4's VehicleSerial channel. Sortable
 columns; per-row open-folder / open-in-viewer buttons; Wh/km bar chart
 colored by EMS strategy; the efficiency-vs-drivability scatter (bottom-
 left wins); CSV export for publication plots.
+
+## Import a real drive
+
+Scenario tab → **Import real drive**: pick an MF4 logged in the actual
+car, map the channels (speed + unit; optional steering source), and the
+drive becomes a runnable scenario. Steering/path sources:
+- **None** — speed-only, straight line (any drive length).
+- **Yaw rate** — dead-reckoned path (∫yaw, ∫v); great for maneuvers of
+  minutes, drifts over long drives.
+- **Steering wheel** — bicycle-model yaw from steer angle, the Vehicle
+  Builder's steer ratio + wheelbase; same drift caveat.
+- **GPS lat/lon** — drift-free path.
+
+With a path source, the importer writes a **DDF** companion
+(`[DEMAND_VECTORS] {X Y Z DV}` — path points in meters + demanded speed,
+~2 m spacing, Altair's own Snet_path grammar) and an ADF whose
+FEEDFORWARD_STEERING follows it (`PATH='DDF'`) while traction follows the
+DV column. The path-vs-odometer percentage in the import stats is the
+sanity check (⚠ if off by >5 %). Both files land in the run folder.

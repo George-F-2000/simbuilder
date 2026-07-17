@@ -48,6 +48,61 @@
       </div>
     </div>
 
+    <!-- Import a REAL drive (logged MF4 from the actual car) as a scenario.
+         pywebview-only. -->
+    <div class="card hidden" id="importCard">
+      <h2>Import real drive <span class="hint">logged MF4 → runnable scenario</span></h2>
+      <div class="row">
+        <button id="btnImpPick" class="ghost">Pick logged MF4…</button>
+        <span id="impFile" class="hint" style="align-self:center"></span>
+      </div>
+      <div id="impBody" class="hidden">
+        <div class="row">
+          <label>Scenario name<input type="text" id="impName" value="RealDrive"></label>
+          <label>Speed channel<select id="impSpeedCh"></select></label>
+          <label>Speed unit
+            <select id="impSpeedUnit">
+              <option>km/h</option><option>mph</option>
+              <option>m/s</option><option>mm/s</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <label>Steering / path source
+            <select id="impLateral">
+              <option value="none">None — speed only (straight line)</option>
+              <option value="yaw">Yaw-rate channel (dead reckoning)</option>
+              <option value="steer">Steering-wheel channel (bicycle model)</option>
+              <option value="gps">GPS latitude + longitude</option>
+            </select></label>
+        </div>
+        <div class="row imp-opt" id="impYawRow">
+          <label>Yaw-rate channel<select id="impYawCh"></select></label>
+          <label>Unit<select id="impYawUnit"><option>deg/s</option><option>rad/s</option></select></label>
+        </div>
+        <div class="row imp-opt" id="impSteerRow">
+          <label>Steering channel<select id="impSteerCh"></select></label>
+          <label>Unit<select id="impSteerUnit"><option>deg</option><option>rad</option></select></label>
+        </div>
+        <div class="row imp-opt" id="impGpsRow">
+          <label>Latitude channel<select id="impLatCh"></select></label>
+          <label>Longitude channel<select id="impLonCh"></select></label>
+        </div>
+        <div class="row">
+          <label>Start at (s, optional)<input type="number" id="impT0" min="0" step="1"></label>
+          <label>End at (s, optional)<input type="number" id="impT1" min="0" step="1"></label>
+        </div>
+        <div class="row">
+          <button id="btnImpBuild">Build scenario</button>
+          <button id="btnImpRun" class="run-ms hidden">&#9654; Run imported drive</button>
+        </div>
+        <p id="impStats" class="hint"></p>
+        <p class="hint">Path notes: yaw/steer dead reckoning drifts slowly —
+        best for maneuvers of a few minutes; GPS is drift-free. Steering
+        uses the Vehicle Builder's steer ratio + wheelbase. Speed-only
+        works for any length and steers straight ahead.</p>
+      </div>
+    </div>
+
     <div class="card" id="scenarioCard">
       <h2>Scenario</h2>
       <div class="row">
