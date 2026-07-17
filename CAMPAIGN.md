@@ -41,9 +41,11 @@ mid-campaign** (the serial number is your witness).
 ## Phase 4 — reviewer-proofing (sensitivity)
 - [ ] Repeat the HWFET sweep at **±10 % mass** (Vehicle Builder, two new
       serials). Shows conclusions aren't knife-edge.
-- [ ] Replace the synthetic motor efficiency maps with real LYRIQ data
-      (upload or MotorBuilder) and re-run the HWFET sweep — kills the
-      "synthetic map" caveat and re-optimizes loss_optimal properly.
+- [x] Replace the synthetic motor efficiency maps with real motor data —
+      DONE UP FRONT (2026-07-17): the campaign vehicle "LYRIQ (AAM+SRM
+      real maps)" SN-0795028990 already carries the real AAM front (18:1)
+      and SRM rear (9.59:1) maps incl. regen, solver-validated. The
+      "synthetic map" caveat never enters the campaign.
 
 ## Phase 5 — writing
 - [ ] Export the final Results CSV → publication plots.
