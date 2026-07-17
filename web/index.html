@@ -91,11 +91,22 @@
           <label>Start at (s, optional)<input type="number" id="impT0" min="0" step="1"></label>
           <label>End at (s, optional)<input type="number" id="impT1" min="0" step="1"></label>
         </div>
+        <label class="apply-check"><input type="checkbox" id="impDdf">
+          (experimental) run with DDF path following — <b>currently
+          non-functional in this deck</b>: the driver reads the path but
+          steers straight and stops early. Off = the run follows the speed
+          trace (proven); the steering source still draws the travel map.</label>
         <div class="row">
           <button id="btnImpBuild">Build scenario</button>
           <button id="btnImpRun" class="run-ms hidden">&#9654; Run imported drive</button>
         </div>
         <p id="impStats" class="hint"></p>
+        <canvas id="impMap" width="640" height="360" class="hidden"></canvas>
+        <p id="impMapLegend" class="hint hidden">travel map — line color:
+          <span style="color:#c0392b">■ slow</span> →
+          <span style="color:#b8a20c">■</span> →
+          <span style="color:#1e7e34">■ fast</span>
+          (straight ribbon when no steering source is chosen)</p>
         <p class="hint">Path notes: yaw/steer dead reckoning drifts slowly —
         best for maneuvers of a few minutes; GPS is drift-free. Steering
         uses the Vehicle Builder's steer ratio + wheelbase. Speed-only

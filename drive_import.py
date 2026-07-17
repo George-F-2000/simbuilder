@@ -148,9 +148,14 @@ def _resample_path(t, v_ms, x, y, spacing_m=2.0):
 
 
 def build_ddf(name, t, v_ms, x, y, spacing_m=2.0):
+    """DDF in the DECK's units (mm, mm/s). Empirically the driver's path
+    math runs in deck units regardless of the DDF's own units header
+    (a meters DDF produced 'path error > 1 mm' spam and a forced stop);
+    all-mm is correct under either interpretation."""
     idx = _resample_path(t, v_ms, x, y, spacing_m)
-    rows = "\n".join("{:<11.3f} {:<11.3f} {:<4} {:.3f}".format(
-        x[i], y[i], 0, max(v_ms[i], 0.1)) for i in idx)
+    rows = "\n".join("{:<13.1f} {:<13.1f} {:<4} {:.1f}".format(
+        x[i] * 1000.0, y[i] * 1000.0, 0, max(v_ms[i], 0.1) * 1000.0)
+        for i in idx)
     return """$-----------------------------------------------------------------ALTAIR_HEADER
 [ALTAIR_HEADER]
 FILE_TYPE 		= 'DDF'
@@ -161,7 +166,7 @@ $--------------------------------------------------------------------------UNITS
 [UNITS]
 (BASE)
 {{length  force      angle       mass    time}}
-'m'   'newton'   'radians'   'kg'    'sec'
+'mm'   'newton'   'radians'   'kg'    'sec'
 $-------------------------------------------------------------------DEMAND_VECTORS
 [DEMAND_VECTORS]
 {{X	    Y	    Z	DV}}

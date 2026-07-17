@@ -735,6 +735,20 @@ window.msPipe = {
   },
 };
 
+/* every run entry point confirms the solver time step first - George's
+   rule: sims run at 10 ms, full stop. Anything else gets a loud warning. */
+function confirmTimestep(h) {
+  const ms = (h * 1000).toFixed(h >= 0.001 ? 0 : 2);
+  let msg = "Are you sure you want to run with solver time step " +
+            "h_max = " + h + " s (" + ms + " ms)?";
+  if (Math.abs(h - 0.01) > 1e-9) {
+    msg += "\n\n⚠⚠ THIS IS NOT 10 ms ⚠⚠\nAll sims are supposed to run at " +
+           "10 ms. Check the Solver time step slider unless you really " +
+           "mean this.";
+  }
+  return confirm(msg);
+}
+
 /* shared run-panel preparation for single runs and the AVL cycle batch */
 function openRunPanel(statusText) {
   $("#runCard").classList.remove("hidden");
@@ -785,9 +799,10 @@ $("#btnRunCycle").onclick = async () => {
 /* EPA drive cycles (closed-loop demand-curve scenarios) */
 function runDriveCycle(name, blurb) {
   return async () => {
-    if (!confirm(`Run the ${name} drive cycle?\n\n${blurb}\n\nThe vehicle ` +
-                 `from Vehicle Builder is used; results land in the runs ` +
-                 `folder as ${name}_<timestamp> with its own MF4.`)) return;
+    if (!confirm(`Run the ${name} drive cycle?\n\n${blurb}\n\nSolver time ` +
+                 `step: h_max = 0.01 s (10 ms) ✓\nThe vehicle from Vehicle ` +
+                 `Builder is used; results land in the runs folder as ` +
+                 `${name}_<timestamp> with its own MF4.`)) return;
     openRunPanel(`starting ${name}…`);
     const res = await pywebview.api.run_cycle(name,
       window.vehiclePayload ? vehiclePayload() : null);
@@ -841,6 +856,41 @@ $("#btnImpPick").onclick = async () => {
   $("#impStats").textContent = "";
 };
 
+/* travel map: polyline colored red (slow) -> green (fast) */
+function speedColor(v, vmin, vmax) {
+  const f = vmax > vmin ? (v - vmin) / (vmax - vmin) : 1;
+  // red (0°) -> yellow (55°) -> green (135°)
+  return `hsl(${Math.round(135 * f)} 75% 40%)`;
+}
+
+function drawTravelMap(canvas, xs, ys, v_kph) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height, pad = 26;
+  ctx.clearRect(0, 0, W, H);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const span = Math.max(xmax - xmin, ymax - ymin, 1);
+  const s = (Math.min(W, H) - 2 * pad) / span;
+  const ox = (W - (xmax - xmin) * s) / 2, oy = (H + (ymax - ymin) * s) / 2;
+  const X = x => ox + (x - xmin) * s;
+  const Y = y => oy - (y - ymin) * s;   // y up
+  const vmin = Math.min(...v_kph), vmax = Math.max(...v_kph);
+  ctx.lineWidth = 3; ctx.lineCap = "round";
+  for (let i = 1; i < xs.length; i++) {
+    ctx.strokeStyle = speedColor((v_kph[i] + v_kph[i - 1]) / 2, vmin, vmax);
+    ctx.beginPath();
+    ctx.moveTo(X(xs[i - 1]), Y(ys[i - 1]));
+    ctx.lineTo(X(xs[i]), Y(ys[i]));
+    ctx.stroke();
+  }
+  // start / end markers
+  ctx.fillStyle = "#33404e"; ctx.font = "11px system-ui";
+  ctx.beginPath(); ctx.arc(X(xs[0]), Y(ys[0]), 5, 0, 7); ctx.fill();
+  ctx.fillText("start", X(xs[0]) + 8, Y(ys[0]) - 6);
+  ctx.fillText("end (" + vmin.toFixed(0) + "–" + vmax.toFixed(0) + " km/h)",
+               X(xs[xs.length - 1]) + 8, Y(ys[ys.length - 1]) + 4);
+}
+
 $("#btnImpBuild").onclick = async () => {
   if (!impPath) return;
   readVehicleInputs && readVehicleInputs();
@@ -853,6 +903,7 @@ $("#btnImpBuild").onclick = async () => {
     yaw_ch: $("#impYawCh").value, yaw_unit: $("#impYawUnit").value,
     steer_ch: $("#impSteerCh").value, steer_unit: $("#impSteerUnit").value,
     lat_ch: $("#impLatCh").value, lon_ch: $("#impLonCh").value,
+    experimental_ddf: $("#impDdf").checked,
     t_start: $("#impT0").value || null,
     t_end: $("#impT1").value || null,
   };
@@ -879,9 +930,15 @@ $("#btnImpBuild").onclick = async () => {
   }
   $("#impStats").textContent = txt;
   $("#btnImpRun").classList.remove("hidden");
+  if (r.preview && r.preview.x && r.preview.x.length > 1) {
+    $("#impMap").classList.remove("hidden");
+    $("#impMapLegend").classList.remove("hidden");
+    drawTravelMap($("#impMap"), r.preview.x, r.preview.y, r.preview.v_kph);
+  }
 };
 
 $("#btnImpRun").onclick = async () => {
+  if (!confirmTimestep(0.01)) return;
   openRunPanel("starting imported drive…");
   const res = await pywebview.api.run_imported(
     window.vehiclePayload ? vehiclePayload() : null);
@@ -948,6 +1005,8 @@ $("#btnPickRuns").onclick = async () => applyState(await pywebview.api.pick_runs
 $("#btnOpenRuns").onclick = () => pywebview.api.open_runs_root();
 
 $("#btnRun").onclick = async () => {
+  readScenarioInputs();
+  if (!confirmTimestep(sc.hmax)) return;
   openRunPanel("starting…");
   const res = await pywebview.api.run_scenario(sc.name || safeName(), adfText,
     window.vehiclePayload ? vehiclePayload() : null);

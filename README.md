@@ -199,6 +199,16 @@ drive becomes a runnable scenario. Steering/path sources:
   Builder's steer ratio + wheelbase; same drift caveat.
 - **GPS lat/lon** — drift-free path.
 
+**Honesty note on path following:** the DDF grammar is Altair's own
+(Snet_path example) and the driver reads and instantiates it — but in THIS
+deck the steering then follows it with zero output and the run stops early
+(confirmed even with the proven stock doublelane ADF surgically re-pointed
+at a DDF). Path runs are therefore behind an "(experimental)" checkbox,
+default off: imports run as speed-followers (proven, 0.42 km/h RMSE class)
+while the steering source still powers the red→green travel map. Revisit
+when the Altair driver's DDF handling is fixed or the missing requirement
+is found.
+
 With a path source, the importer writes a **DDF** companion
 (`[DEMAND_VECTORS] {X Y Z DV}` — path points in meters + demanded speed,
 ~2 m spacing, Altair's own Snet_path grammar) and an ADF whose
