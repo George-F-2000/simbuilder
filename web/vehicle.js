@@ -29,7 +29,7 @@ function defaultVehicle() {
         ratedVoltageV: 380, ratedCurrentA: 400, gearRatio: 3.7, effMapPath: "" },
     ],
     generateMotors: true,
-    applyMass: true,
+    applyMass: false,
     ems: { enabled: false, strategy: "loss_optimal", threshold: 250 },
     packVoltage: 380, packKWh: 100,
     massKg: 2230, cd: 0.28, frontalM2: 2.6,
@@ -64,7 +64,7 @@ function vehLoadStored() {
   // nested motor objects)
   (veh.motors || []).forEach(m => { if (m.effMapPath === undefined) m.effMapPath = ""; });
   if (veh.generateMotors === undefined) veh.generateMotors = true;
-  if (veh.applyMass === undefined) veh.applyMass = true;
+  if (veh.applyMass === undefined) veh.applyMass = false;
   if (!veh.ems) veh.ems = { enabled: false, strategy: "loss_optimal", threshold: 250 };
   // migration: gear ratio became ⚡ real in v2. Vehicles stored before that
   // carry the old placeholder default (10.5) which never matched the deck
