@@ -465,6 +465,20 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
         else:
             log("  WARNING: tire override not found, using deck default: " + tire)
 
+    # aero property file override (⚡): every .aae reference re-pointed,
+    # same mechanism as the tire (runs after patch_deck, so refs are
+    # already absolute)
+    aero = vehicle.get("aero_path")
+    if aero:
+        if os.path.isfile(aero):
+            deck_text = re.sub(
+                r'(?:[A-Za-z]:/|(?:\.\./)+)[^";\r\n]+?\.aae',
+                aero.replace("\\", "/"), deck_text, flags=re.IGNORECASE)
+            log("  vehicle: aero file -> " + os.path.basename(aero))
+        else:
+            log("  WARNING: aero override not found, using deck default: "
+                + aero)
+
     spec = vehicle.get("spec") or {}
 
     # generated motor files (⚡): specs + optional uploaded efficiency maps

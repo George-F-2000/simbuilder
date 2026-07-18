@@ -41,6 +41,7 @@ function defaultVehicle() {
     steerRatio: 15.8,
     rimIn: 15, tireSpec: "205/60R15",
     tirePath: "",          // ⚡ .tir override (empty = deck default)
+    aeroPath: "",          // ⚡ .aae aero override (empty = deck default)
     matOverrides: {},      // ⚡ {original .mat basename: replacement path}
     notes: "",
   };
@@ -69,6 +70,7 @@ function vehLoadStored() {
     if (m.effMapPath === undefined) m.effMapPath = "";
     if (m.envFromFile === undefined) m.envFromFile = false;
   });
+  if (veh.aeroPath === undefined) veh.aeroPath = "";
   if (veh.deckDefault === undefined) veh.deckDefault = false;
   if (veh.generateMotors === undefined) veh.generateMotors = true;
   if (veh.applyMass === undefined) veh.applyMass = false;
@@ -481,6 +483,12 @@ function renderOverrides(state) {
       (info.tires && info.tires.length ? " — " + info.tires.join(", ") : ""))}</code>` +
     '<button class="ghost" id="btnPickTir">Change…</button>' +
     (veh.tirePath ? '<button class="ghost" id="btnResetTir">Reset</button>' : "") +
+    "</div>" +
+    '<div class="setup-row"><span class="setup-label">Aero file (.aae) ' +
+    '<span class="badge sim">⚡ affects sim</span></span>' +
+    `<code class="setup-path">${escHtml(veh.aeroPath || "deck default")}</code>` +
+    '<button class="ghost" id="btnPickAae">Change…</button>' +
+    (veh.aeroPath ? '<button class="ghost" id="btnResetAae">Reset</button>' : "") +
     "</div>";
 
   const mats = (info.mats || []).filter(m => !MOTOR_MANAGED.test(m));
@@ -503,6 +511,13 @@ function renderOverrides(state) {
   };
   const resetTir = $("#btnResetTir");
   if (resetTir) resetTir.onclick = () => { veh.tirePath = ""; vehRefresh(false); };
+  const pickAae = $("#btnPickAae");
+  if (pickAae) pickAae.onclick = async () => {
+    const p = await pywebview.api.pick_file("Aero property file (*.aae)|*.aae");
+    if (p) { veh.aeroPath = p; vehRefresh(false); }
+  };
+  const resetAae = $("#btnResetAae");
+  if (resetAae) resetAae.onclick = () => { veh.aeroPath = ""; vehRefresh(false); };
   $$(".pick-mat").forEach(b => b.onclick = async () => {
     const p = await pywebview.api.pick_file("MATLAB data (*.mat)|*.mat");
     if (p) { veh.matOverrides[b.dataset.mat] = p; vehRefresh(false); }
@@ -548,6 +563,7 @@ function vehiclePayload() {
     spec: veh,
     deck_default: !!veh.deckDefault,
     tire_path: veh.tirePath || null,
+    aero_path: veh.aeroPath || null,
     mat_overrides: veh.matOverrides,
     pack_voltage: veh.packVoltage,
     generate_motors: !!veh.generateMotors,
