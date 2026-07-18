@@ -107,16 +107,21 @@ MIN_VALUE            = -9.4248
 SMOOTHING_FREQUENCY  = 10
 INITIAL_VALUE        = 0
 $-------------------------------------------------------------------THROTTLE_STANDARD
+$ 1 Hz pedal smoothing: the default 10 Hz let the driver bang-bang the
+$ pedal at 4-5 Hz against one-pedal regen during decels (validated tuning
+$ experiment 2026-07-18: jerk RMS 58.9 -> 12.6, torque roughness halved,
+$ RMSE 0.49 km/h vs the 2.0 gate). Cycle/import driver only - the
+$ Scenario Builder keeps crisp pedal steps for tip-in tests.
 [THROTTLE_STANDARD]
 MAX_VALUE            = 1
 MIN_VALUE            = 0
-SMOOTHING_FREQUENCY  = 10
+SMOOTHING_FREQUENCY  = 1
 INITIAL_VALUE        = 0
 $----------------------------------------------------------------------BRAKE_STANDARD
 [BRAKE_STANDARD]
 MAX_VALUE            = 1
 MIN_VALUE            = 0
-SMOOTHING_FREQUENCY  = 10
+SMOOTHING_FREQUENCY  = 1
 INITIAL_VALUE        = 0
 $-----------------------------------------------------------------------GEAR_STANDARD
 [GEAR_STANDARD]
@@ -145,11 +150,19 @@ TASK = 'STANDARD'
  GEAR                      GEAR_CLUTCH_CONTROL       NONE
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE
 $-----------------------------------------------------------FF_TRACTION_CONTROLLER
+$ Explicit tuned PID. On engine-less (EV) decks the driver IGNORES a
+$ FEEDFORWARD traction controller ("No solver info found for engine") and
+$ silently substitutes its internal PID at default gains (Kp 0.5, Ki 0.1)
+$ - the source of the 4-5 Hz decel limit cycle. Declaring the PID here
+$ with softened gains kills the chatter (tuning experiment 2026-07-18;
+$ Kp 0.15 was too soft - RMSE 0.91 and micro-dither).
 [FF_TRACTION_CONTROLLER]
-TAG                    = 'FEEDFORWARD'
+TAG                    = 'PID'
 TYPE                   = 'FOLLOW_VELOCITY'
-LOOK_AHEAD_TIME        = 0.5
 DEMAND_SIGNAL          = 'DEMAND_SPEED'
+KP                     = 0.3
+KI                     = 0.05
+KD                     = 0
 $-----------------------------------------------------------DEMAND_SPEED
 [DEMAND_SPEED]
 TYPE  = 'CURVE'
