@@ -1,9 +1,16 @@
 # THE MODEL BIBLE — how to run a simulation you can defend
 
 Every rule in here was paid for with a real failure or a real near-miss on
-this project. Newest lessons at the bottom of each section. Sibling docs:
-README.md (how the app works), CAMPAIGN.md (the plan),
-ENGINEERING_NOTES.md (the raw session log this distills).
+this project. **Part I** is the rules. **Part II is the Chronicle — the
+full story of this model, told as it happened**, kept as raw material for
+the thesis methodology chapter. When something teaches you (or Claude)
+something new, add a story to Part II and, if it generalizes, a rule to
+Part I. Sibling docs: README.md (how the app works), CAMPAIGN.md (the
+plan), ENGINEERING_NOTES.md (the dense session log this distills).
+
+---
+
+# PART I — THE RULES
 
 ---
 
@@ -202,3 +209,152 @@ Validity gates per run:
 - The vehicle also lives as a .vehicle.json export next to the model data
   (`MBD - Copy For Testing\LYRIQ_AAM_SRM_real_maps.vehicle.json`) —
   re-loadable on any machine, reproducing the identical serial.
+
+---
+
+# PART II — THE CHRONICLE
+
+The story of this model, in order, with what each chapter taught. Dates
+are real. Add new chapters at the bottom as they happen.
+
+## Ch. 1 — Origins: a converter grows into a pipeline (June–July 2026)
+
+It started as a small tool to convert CSV logs to MF4 for AVL Drive. Then
+a PLT→MF4 converter for MotionSolve outputs. Then the realization: if the
+outputs can be automated, so can the inputs — and SimBuilder was born
+around the doublelane demo deck: scenario builder → deck patcher →
+headless MotionSolve → MF4 → viewer, one exe. The builder's ADF format
+was validated end-to-end on 2026-07-16 (hand-built 5 s scenario, correct
+physics, regen on tip-out). First hard numerics lesson the same day: a
+122-second standstill scenario crawled at H≈4e-5 and was killed — "runs
+taking forever" was never the timestep setting, it was standstill
+stiffness. *Moral: know which part of your scenario costs wall-time.*
+
+## Ch. 2 — Making the vehicle real (2026-07-16)
+
+Vehicle Builder fields stopped being decorative: the motor .mat schema
+was reverse-engineered (envelope + efficiency + regen grids), the mass
+patch verified against the solver's own "Total Mass" printout, and the
+final-drive couplers PROVEN to be the complete motor→wheel reduction by
+measuring EM/wheel speed ratios in the output. The serial-number
+fingerprint was added the same day: FNV-1a over the whole spec, written
+into every MF4. *Moral: never claim a field "affects the sim" until the
+output proves it — and stamp every result with what produced it.*
+
+## Ch. 3 — Decoding the EMS (2026-07-16)
+
+The dual-motor torque split lives in `optimal_torque_ratio_map` (the
+`r_ch` grid) inside the motor FMU. Semantics were established
+empirically: inject r_ch=0 → EM2 carries nothing; r_ch=0.5 → even split —
+tested at moderate throttle, because full throttle saturates both motors
+and masks the split. Strategies built on those axes: loss_optimal (ECMS),
+rule, fuzzy, even, single_motor. *Moral: FMU internals are knowable —
+black boxes surrender to one well-designed A/B experiment.*
+
+## Ch. 4 — The LYRIQ arrives, and everything breaks politely (2026-07-17, lab)
+
+Pointing the pipeline at the real LYRIQ deck surfaced a day of ambushes:
+runs died in 2 s on a bare `&` in a share-folder path (XML parser), the
+file dialogs had been silently killed by that morning's pywebview
+upgrade, a hi-DPI bug grew the canvases exponentially on the lab's 4K
+display, and — the big one — this deck has NO external motor files: the
+motor data lives INSIDE Motor_PMSM_dual.fmu. fmu_inject.py was born:
+copy the FMU per run, rewrite its internal .mat resources, re-point the
+deck. *Moral: a new deck is a new country; assume nothing imported.*
+
+## Ch. 5 — The night of portability (2026-07-17, home)
+
+"I just can't run the LYRIQ at home because everything points to the
+lab." One evening fixed it forever: per-machine settings sections in the
+synced settings.json, user-profile healing (George↔gfare), Altair
+VERSION healing (lab 2025.1 ↔ home 2025) for FMUs/road/aero/DLLs, the
+deck's ADF reference re-pointed into the run folder (it had silently
+pointed at the ORIGINAL scenario — wrong-scenario risk on every machine),
+and MotionView's animation sensor neutralized for headless runs. Then, at
+last: THE FIRST COMPLETE LYRIQ SOLVE THROUGH THE PIPELINE — 6 sim-s in
+114 s, physics verified down to the EM speed ratio matching the gearing.
+*Moral: machine-portability is a set of specific, fixable failures, not
+fate.*
+
+## Ch. 6 — The gearing confession (2026-07-17)
+
+The deck shipped front=18:1, rear=9.59:1; George had said the physical
+car was the opposite, and the notes carried a standing "ASK GEORGE"
+warning for a day. Resolution: "The AAM, in the front, is 18:1. The SRM,
+in the rear, is the 9.59:1. That's my bad." The deck had been right all
+along. *Moral: write down unresolved contradictions loudly — and let the
+hardware answer beat the memory.*
+
+## Ch. 7 — Real motors, honest precedence (2026-07-17, evening)
+
+George's real scans arrived: a 49×50 AAM (induction) map to 23.5k rpm /
+235 Nm / 94% peak, and a 14×21 SRM map to 9k rpm / 198 Nm / 91.5%.
+Datasheet ratings arrived an hour later and DISAGREED with the files
+(SRM: 318 Nm / 16k rpm rated vs 198 Nm / 9k measured). Rather than let
+one silently win, precedence became explicit: fields build the envelope
+by default; a per-motor "Map file is truth" checkbox hands it to the
+file's measured curve; either way the choice is hashed into the serial.
+Solver-validated both ways in the FMU bytes. *Moral: when two sources of
+truth conflict, make the choice visible, recorded, and reversible.*
+
+## Ch. 8 — "Will it go horribly wrong?" (2026-07-17, night)
+
+George asked for a pre-flight audit instead of an overnight surprise. It
+found the campaign-killer: on the LYRIQ, EMS was a SILENT NO-OP — the
+builder only knew how to shadow an external map file, and this deck keeps
+the map inside the FMU. Phase 1 would have produced six identical runs
+labeled as six strategies. Fixed by FMU injection; proven with
+single_motor collapsing EM2 to ~zero. The same audit run also exposed
+that the exe forgot every vehicle on restart (pywebview 6 defaults to
+ephemeral storage). *Moral: audits before campaigns; the most dangerous
+failure is the one that still produces plausible-looking output.*
+
+## Ch. 9 — The standstill bisection (2026-07-17, late night)
+
+George's first real run died instantly; the log's last line blamed the
+"xml input file" and nearly sent him deck-hunting. The FIRST error told
+the truth: the integrator failed at t=2.236e-10. Eight runs bisected it:
+not h_max, not the injection, not the tire's VXLOW, not
+ENGINE_INIT_SPEED, not the stock deck being special — the model simply
+cannot INITIALIZE at exactly v=0, in any configuration. Five plausible
+theories died before the sixth run found it. Fix: a 0.9 km/h creep-start
+floor in both ADF generators. The stop-and-go test then proved mid-run
+v=0 crossings work (UDDS viable), and priced standstill dwells at ~4–5
+wall-minutes per parked sim-second. *Moral: bisect with cheap runs;
+theories are free and usually wrong.*
+
+## Ch. 10 — The first HWFET, and the number that was too good (2026-07-17→18)
+
+Eleven hours, completed, tracking clean — and Wh/km "almost exactly a
+stock LYRIQ." The audit ruined the celebration properly: the sticker
+figure it matched is adjusted wall-to-wheel (different units of test);
+on equal basis the model is ~1.7–1.9× thirstier than stock. And the
+motor scans barely participated — the AAM map is EMPTY at light load,
+exactly where highway cycles live, and the FMU treats empty cells as
+lossless. Meanwhile the signals were noisy at 4–5 Hz during decels: the
+driver (its feedforward controller silently ignored on an engine-less
+deck) was bang-banging its default-gain internal PID against one-pedal
+regen. Also caught: the run's serial didn't match the campaign vehicle —
+a stray "map is truth" checkbox, correctly fingerprinted. *Morals: §5's
+units bases; §4's coverage rule; a result that matches expectations is
+not yet a result.*
+
+## Ch. 11 — Tuning the driver like a calibrator (2026-07-18)
+
+The chatter fix was approached exactly like an HIL calibration task:
+isolate a 75 s decel-rich HWFET segment, run variants concurrently
+(three solvers side-by-side — which also proved the license supports
+parallel solving, unlocking the sweep-farm plan). Round 1: pedal
+smoothing 10→2 Hz halved chatter and IMPROVED tracking; "look-ahead" was
+exposed as a dead knob (the FF controller it belongs to is ignored).
+Round 2 (explicit PID gains declared in the ADF) in progress. The tune
+measurably changes regen energy — so the driver, like the vehicle, gets
+frozen and serialized into the experimental setup before the campaign.
+*Moral: the virtual driver is part of the experiment, not scenery.*
+
+## Ch. 12 — (open) The road to defensible numbers
+
+Standing work when this chapter was opened: dimension-correct 265/50R22
+tire file; LYRIQ-correct aero .aae; light-load coverage for the AAM map
+(measured, or disclosed physics fill); driver tune frozen; HWFET baseline
+re-run; parallel EMS sweep. Write the ending when it happens.

@@ -7,7 +7,9 @@ work on any machine. Newest entries first. Paths refer to George's primary
 machine; the deck patcher heals machine-specific paths automatically.
 
 Related: README.md (architecture + build commands), CAMPAIGN.md (the
-simulation to-do list).
+simulation to-do list), **MODEL_BIBLE.md (rules + the Chronicle — when a
+session teaches something new, add a story chapter there; George mines it
+for the thesis methodology chapter)**.
 
 ---
 
