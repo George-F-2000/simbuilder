@@ -657,10 +657,13 @@ def run_motionsolve(settings, run_dir, deck_name, log,
         creationflags=creationflags)
     if proc_holder is not None:
         proc_holder["proc"] = proc
+    solver_failed = False
     for line in proc.stdout:
         line = line.rstrip()
         if not line:
             continue
+        if "Simulation failed due to error" in line:
+            solver_failed = True
         log(line)
         if progress and sim_total:
             m = TIME_LINE.match(line)
@@ -680,6 +683,14 @@ def run_motionsolve(settings, run_dir, deck_name, log,
     if code != 0:
         raise RuntimeError("MotionSolve exited with code {}".format(code))
 
+    if solver_failed:
+        # a partial .plt may exist (statics / the first steps) - do NOT
+        # convert it as if the run succeeded; the truncated MF4 would look
+        # like a real result on the leaderboard
+        raise RuntimeError(
+            "the solver reported 'Simulation failed' - the maneuver did not "
+            "complete (partial outputs are in the run folder; see the log "
+            "above for the first ERROR)")
     plt_path = os.path.join(run_dir, os.path.splitext(deck_name)[0] + ".plt")
     if not os.path.isfile(plt_path):
         raise RuntimeError(
