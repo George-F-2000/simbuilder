@@ -153,11 +153,20 @@ Validity gates per run:
 
 - **ΔSOC column is fiction**: the FMU's internal pack is ~9 kWh (SOC fell
   75→28% on one HWFET). Use integrated kWh; ignore SOC % until scaled.
-- **Driver pedal chatter (4–5 Hz) during decels**: the FF speed follower
-  bang-bangs between 0% pedal (hard regen) and ~18% because gentle decels
-  sit between its two levers. Pollutes jerk/chatter drivability metrics.
-  Tuning experiment (pedal smoothing 10→2 Hz, look-ahead 0.5→1.5 s) in
-  progress; winning values will be baked into drive_cycles.py + app.js.
+- **Driver pedal chatter (4–5 Hz) during decels**: the driver bang-bangs
+  between 0% pedal (hard regen) and ~18% because gentle decels sit between
+  its two levers. Pollutes jerk/chatter drivability metrics. KEY FACT: on
+  this EV deck the driver logs "No solver info found for engine -
+  Feedforward traction controller ignored" and silently instantiates an
+  internal feedback PID with DEFAULT gains (Kp 0.5, Ki 0.1, Kd 0) —
+  LOOK_AHEAD_TIME is therefore a DEAD knob; the real levers are the pedal
+  SMOOTHING_FREQUENCY and an explicit `TAG='PID'` controller block with
+  tuned KP/KI/KD (grammar: ADFtemplates writePIDControllerBlock).
+  Measured so far: smoothing 10→2 Hz alone halves chatter (6.4→2.8
+  torque reversals/s) and improves RMSE (0.41→0.30 km/h). PID-gain round
+  in progress; winning tune goes into drive_cycles.py + app.js. NOTE the
+  driver tune measurably changes regen energy — freeze it BEFORE the
+  campaign; it is part of the experimental setup like the vehicle.
   Until then: drivability metrics from cycle runs are NOT meaningful.
 - **BattPower at light load**: overall traction chain efficiency 0.62 vs
   0.87 at cruise points — suggests a constant parasitic draw worth
