@@ -358,10 +358,11 @@ function drawPlots(sim) {
   // (measured: 0.6 sim-seconds in 3.5 wall-minutes). Warn loudly.
   const extra = [];
   if (sc.startSpeedKph < 5) {
-    extra.push("Start speed is " + sc.startSpeedKph + " kph: standstill " +
-      "pull-away is numerically very stiff in this model and the solver " +
-      "can take HOURS regardless of the time-step setting. A rolling " +
-      "start (≥ 10 kph) solves ~100× faster.");
+    extra.push("Start speed is " + sc.startSpeedKph + " kph: the model " +
+      "cannot initialize at exactly 0, so the run starts at a 0.9 km/h " +
+      "creep (validated fix). Note standstill pull-away is numerically " +
+      "stiff and slow to solve; a rolling start (≥ 10 kph) solves much " +
+      "faster when the launch itself isn't the point.");
   }
   $("#warnings").innerHTML = sim.warnings.concat(extra)
     .map(w => `<div class="warn">&#9888; ${w}</div>`).join("");
@@ -421,7 +422,11 @@ function generateHeaderText() {
   s += sectionHeader("VEHICLE_IC");
   s += "[VEHICLE_INITIAL_CONDITIONS]\n";
   s += "$These are wrt vehicle orientation marker\n";
-  s += `VX0               = ${fmt(sc.startSpeedKph * KPH2MMS)}\n`;
+  // CREEP-START FLOOR: the LYRIQ deck cannot INITIALIZE at exactly v=0
+  // (DASPK dies on the first step in every configuration - stock deck
+  // included; empirically bisected 2026-07-17). 250 mm/s = 0.9 km/h
+  // initializes fine and the driver immediately regulates to the demand.
+  s += `VX0               = ${fmt(Math.max(sc.startSpeedKph * KPH2MMS, 250))}\n`;
   s += "VY0               = 0.0\n";
   s += "VZ0               = 0.0\n";
   s += `ENGINE_INIT_SPEED = ${fmt(sc.engineInit)}\n`;
