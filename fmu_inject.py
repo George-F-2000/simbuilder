@@ -119,12 +119,41 @@ def _resample_full(src, n_spd=motor_gen.N_SPD, n_trq=motor_gen.N_TRQ,
         t_grid = np.linspace(0.0, float(eff_trq.max()), n_trq)
     new_eff = motor_gen.regrid(eff_spd, eff_trq, eff, w, t_grid)
 
+    # HONEST ZERO-FILL (the first-HWFET lesson): cells where the uploaded
+    # scan has no data (zeros) would otherwise run ~lossless - the FMU
+    # clamps them - so an uncovered light-load region silently ran the
+    # whole highway cycle on ideal motors. Fill uncovered cells with the
+    # synthetic bowl scaled to the scan's own peak; keep measured cells
+    # verbatim; log the coverage so every run states how much of its map
+    # is measurement vs model. The zero-speed row stays zero (physical).
+    synth = motor_gen.default_eff_map(w, t_grid) * (float(eff.max()) / 0.97)
+    hole = new_eff <= 1e-6
+    hole[0, :] = False
+    n_fill = int(hole.sum())
+    if n_fill and log:
+        total = new_eff.size - new_eff.shape[1]   # minus the w=0 row
+        log("    map coverage: {:.0f}% measured - {} of {} cells filled "
+            "with the scaled synthetic model (uncovered scan region)"
+            .format(100.0 * (total - n_fill) / total, n_fill, total))
+    new_eff = np.where(hole, np.clip(synth, 0.05, 1.0), new_eff)
+
     t_regen = np.linspace(-float(t_grid.max()), float(t_grid.max()),
                           2 * n_trq - 1)
     if "m_eff_map_regen" in src and "m_map_eff_trq_regen" in src:
         rtrq = np.ravel(src["m_map_eff_trq_regen"]).astype(float)
         rmap = np.asarray(src["m_eff_map_regen"], dtype=float)
         eff_regen = motor_gen.regrid(eff_spd, rtrq, rmap, w, t_regen)
+        # same zero-fill for the regen quadrant, mirrored over |torque|
+        hole_r = eff_regen <= 1e-6
+        hole_r[0, :] = False
+        if hole_r.any():
+            synth_r = np.empty_like(eff_regen)
+            for j, tq in enumerate(t_regen):
+                jj = int(np.clip(np.interp(abs(tq), t_grid,
+                                           np.arange(n_trq)), 0, n_trq - 1))
+                synth_r[:, j] = synth[:, jj]
+            eff_regen = np.where(hole_r, np.clip(synth_r, 0.05, 1.0),
+                                 eff_regen)
     else:
         eff_regen = np.empty((n_spd, len(t_regen)))
         for j, tq in enumerate(t_regen):
