@@ -169,12 +169,18 @@ Validity gates per run:
   LOOK_AHEAD_TIME is therefore a DEAD knob; the real levers are the pedal
   SMOOTHING_FREQUENCY and an explicit `TAG='PID'` controller block with
   tuned KP/KI/KD (grammar: ADFtemplates writePIDControllerBlock).
-  Measured so far: smoothing 10→2 Hz alone halves chatter (6.4→2.8
-  torque reversals/s) and improves RMSE (0.41→0.30 km/h). PID-gain round
-  in progress; winning tune goes into drive_cycles.py + app.js. NOTE the
-  driver tune measurably changes regen energy — freeze it BEFORE the
-  campaign; it is part of the experimental setup like the vehicle.
-  Until then: drivability metrics from cycle runs are NOT meaningful.
+  RESOLVED 2026-07-18 — winning tune (baked into drive_cycles.py, used by
+  cycles + real-drive imports; Scenario Builder keeps crisp open-loop
+  pedal steps): **throttle/brake SMOOTHING_FREQUENCY = 1 Hz + declared
+  PID Kp 0.3 / Ki 0.05 / Kd 0**. vs baseline: jerk RMS 58.9→12.6, EM1
+  torque p99 step 30.7→13.8, RMSE 0.49 vs the 2.0 gate. Kp 0.15 was too
+  soft (RMSE 0.91, micro-dither); Kp 0.3 @ 2 Hz smoothing made the
+  integrator CRAWL (~30 µs steps, killed after 5 h at t=38/75) — a tune
+  that slows the solver 10× is disqualified regardless of metrics. The
+  driver tune measurably changes regen energy (chatter was throwing
+  recuperation away), so it is FROZEN as part of the experimental setup.
+  Cycle drivability metrics from runs BEFORE 2026-07-18 are not
+  comparable to runs after.
 - **BattPower at light load**: overall traction chain efficiency 0.62 vs
   0.87 at cruise points — suggests a constant parasitic draw worth
   auditing before absolute efficiency claims.
@@ -347,10 +353,16 @@ isolate a 75 s decel-rich HWFET segment, run variants concurrently
 parallel solving, unlocking the sweep-farm plan). Round 1: pedal
 smoothing 10→2 Hz halved chatter and IMPROVED tracking; "look-ahead" was
 exposed as a dead knob (the FF controller it belongs to is ignored).
-Round 2 (explicit PID gains declared in the ADF) in progress. The tune
-measurably changes regen energy — so the driver, like the vehicle, gets
-frozen and serialized into the experimental setup before the campaign.
-*Moral: the virtual driver is part of the experiment, not scenery.*
+Round 2 declared explicit PID gains in the ADF and crowned the winner:
+1 Hz smoothing + Kp 0.3/Ki 0.05 — jerk down 4.7×, tracking well inside
+the gate. Two instructive losers: too-soft gains went sloppy, and one
+combination (same gains, 2 Hz smoothing) made the integrator crawl at
+30 µs steps for five hours before being killed — solver cost is a tuning
+criterion too. The chatter had also been throwing away regen energy, so
+the driver tune moves Wh/km: it gets frozen with the vehicle before the
+campaign. *Moral: the virtual driver is part of the experiment, not
+scenery — and an experiment that melts the solver is a failed experiment
+even when its physics looks good.*
 
 ## Ch. 12 — (open) The road to defensible numbers
 
