@@ -53,9 +53,11 @@ per-run overrides, with two honestly-labelled kinds of fields:
   - **Mass**: with "Apply mass to the model" checked, the run's deck is
     patched - the heaviest rigid body (chassis ballast) absorbs the
     difference and its inertia scales proportionally.
-  - **Tire property file** (every .tir reference in the deck re-pointed),
-    per-file **.mat overrides** (win over generated files), and **pack
-    voltage** (EM current estimate).
+  - **Tire property file** (every .tir reference in the deck re-pointed)
+    and **Aero property file** (every .aae reference re-pointed — the
+    LYRIQ deck DOES have an aero force element, contrary to the
+    doublelane), per-file **.mat overrides** (win over generated files),
+    and **pack voltage** (EM current estimate).
 - **📋 spec sheet** - suspension types, wheelbase/track, Cd/frontal area
   (the model has no aero force element, so there is nothing to patch),
   rated current/voltage, rims/tire-size text, notes. Recorded as

@@ -82,29 +82,39 @@ plan), ENGINEERING_NOTES.md (the dense session log this distills).
 ## 4. Input fidelity — the four pillars of an absolute Wh/km
 
 An efficiency number is only as real as its four biggest inputs. State of
-each as of 2026-07-18:
+each as of 2026-07-18 (all four now ADDRESSED — vehicle SN-2499411196):
 
-1. **Mass** — deck solves at 2,710 kg vs real LYRIQ AWD curb ≈ 2,648 kg
-   (5,838 lb). CLOSE ENOUGH. ✅
-2. **Tire** — deck references a scaled generic **205/60R15** TNO car tire;
-   the real car wears **265/50R22** (~820 mm dia vs ~627 mm). Wrong
-   rolling resistance AND wrong radius (skews every motor-speed↔road-speed
-   relationship). ❌ **Biggest suspected Wh/km error.** Fix: obtain or
-   dimension-scale a proper 265/50R22 MF-Swift .tir, set it as the
-   Vehicle Builder tire override (⚡), update the tire-spec text.
-3. **Aero** — deck references Altair's **generic library**
-   `aerodynamic_frc.aae`, not the LYRIQ's CdA (~0.28 × ~2.6 m²). ❌
-   Fix: copy the .aae next to the deck, edit coefficients to LYRIQ
-   values, re-export or re-point the deck ref.
-4. **Motor maps — THE COVERAGE RULE.** The FMU treats empty (zero) map
-   cells as ~lossless. Highway cycles live at LIGHT LOAD (the first
-   HWFET's AAM median operating point: **13 Nm @ 10,440 rpm — a zero
-   cell**), so an uncovered low-load region makes the whole cycle run on
-   ideal motors. Before any efficiency campaign:
-   - overlay the cycle's operating points on the map's covered region;
-   - fill uncovered cells honestly (measured data preferred; physics-based
-     loss model as a disclosed fallback — SimBuilder feature pending);
-   - re-check after ANY map upload.
+1. **Mass** — GOSPEL for our experiments: the prototype is **2746.938776
+   kg** (heavier than a production LYRIQ; 6,056 lb). Set as massKg with
+   "Apply mass" ON; the deck's chassis-ballast body absorbs the delta and
+   the solver statics confirm Total Mass = 2.747E+03 kg. ✅
+2. **Tire** — replaced the generic 205/60R15 with
+   **`LYRIQ_265_50R20_proto.tir`** (in `MBD - Copy For Testing`): donor
+   TNO tyre, dimensions scaled to 265/50R20 at the lab, then load
+   parameters rescaled ×1.087 for the 2746.94 kg prototype (FNOMIN 6737
+   N/corner, vertical/long/lat/yaw stiffness scaled), FZMAX→16 kN,
+   VXLOW→1, inflation 262 kPa, RIM_WIDTH artifact fixed. Set as the
+   Vehicle Builder tire override (⚡). ✅ CAVEAT: the Pacejka SHAPE
+   coefficients are still the donor tyre's — disclosed approximation
+   until a measured 265/50R20 EV tyre file exists (ask Altair academic).
+3. **Aero** — replaced with **`LYRIQ_aero.aae`** (in `MBD - Copy For
+   Testing`): frontal area 2.6 m², Cd 0.28 (incidence curve scaled
+   proportionally). Set as the Vehicle Builder aero override (⚡, new
+   feature). ✅ CAVEAT: lift/side/yaw curves remain the generic donor's
+   (irrelevant to straight-line consumption; disclose if lateral work).
+4. **Motor maps — THE COVERAGE RULE, now enforced by the tool.** The FMU
+   treats empty (zero) map cells as ~lossless; highway cycles live at
+   LIGHT LOAD (first-HWFET AAM median: 13 Nm @ 10,440 rpm — a zero cell).
+   fmu_inject now FILLS uncovered cells with the synthetic bowl scaled to
+   the scan's own peak, keeps measured cells verbatim, and LOGS COVERAGE
+   every run ("map coverage: 93% measured — 14 of 196 cells filled").
+   ✅ Still: prefer real light-load dyno data when you get it; the fill is
+   a disclosed model, not measurement. Re-check coverage after ANY upload.
+
+**NOTE — the "match stock" coincidence is now expected to unwind:** with
+correct (heavier) mass and correct tire/aero, absolute Wh/km should MOVE
+from the old 255.6. Re-run the HWFET baseline on SN-2499411196 and compare
+against real figures on the §5 equal basis; that number is the real one.
 
 ## 5. Comparison bases (the units bible)
 
@@ -364,9 +374,29 @@ campaign. *Moral: the virtual driver is part of the experiment, not
 scenery — and an experiment that melts the solver is a failed experiment
 even when its physics looks good.*
 
-## Ch. 12 — (open) The road to defensible numbers
+## Ch. 12 — Building the defensible vehicle (2026-07-18)
 
-Standing work when this chapter was opened: dimension-correct 265/50R22
-tire file; LYRIQ-correct aero .aae; light-load coverage for the AAM map
-(measured, or disclosed physics fill); driver tune frozen; HWFET baseline
-re-run; parallel EMS sweep. Write the ending when it happens.
+The four input pillars got fixed in one sitting. The driver tune was frozen
+(1 Hz + PID 0.3/0.05). A prototype tyre was built —
+`LYRIQ_265_50R20_proto.tir`, load parameters rescaled for the heavier
+prototype mass George declared gospel (2746.938776 kg, applied and
+confirmed by solver statics at 2.747 t). A LYRIQ aero file replaced
+Altair's generic library values, reaching the deck through a NEW aero
+override (same re-point mechanism as the tire). And the injector learned to
+fill empty map cells honestly — the first-HWFET lesson made into a
+permanent guardrail that logs measured-vs-modeled coverage on every run
+(the AAM scan came out 93% measured). A full-stack validation run confirmed
+all four active at once: tire re-pointed, aero re-pointed, mass patched,
+maps filled, physics sane. New campaign vehicle: **SN-2499411196**.
+*Moral: a defensible number is assembled deliberately, one audited input at
+a time, each disclosed for exactly what it is — measurement where we have
+it, honest model where we don't.*
+
+## Ch. 13 — (open) The real baseline
+
+Standing work: re-run the HWFET on SN-2499411196 (tuned driver + prototype
+tyre/aero/mass + filled maps) — THE defensible baseline row #1 — then the
+parallel EMS sweep. Compare Wh/km to real LYRIQ figures on the §5 equal
+basis and write down how far off, and why. When the number is honest and
+explained, this chapter — and the validation section of the thesis — is
+done. Write the ending when it happens.
