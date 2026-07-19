@@ -41,7 +41,75 @@ from scipy.io import loadmat, savemat
 import motor_gen
 
 
-STRATEGIES = ["deck_default", "loss_optimal", "rule", "fuzzy", "even", "single_motor"]
+STRATEGIES = ["deck_default", "traction", "ratio_even", "loss_optimal",
+              "rule", "fuzzy", "even", "single_motor"]
+
+# ----------------------------------------------------------------------------
+#  GEAR-RATIO AWARENESS  (the 2026-07-18 fix)
+#
+#  r_ch splits the combined MOTOR-torque demand. This vehicle's axles have
+#  very different reductions (front AAM 18:1, rear SRM 9.59:1), so equal
+#  motor torque puts 18/9.59 = 1.88x more torque on the FRONT wheels. The
+#  deck's own default map does exactly that: measured front 178.3 Nm x 18 =
+#  3204 Nm at the wheels vs rear 159.3 x 9.59 = 1527 Nm. Under a hard launch
+#  the front axle (already unloaded by rearward weight transfer) breaks
+#  traction and spins - observed at +1972% slip while the car crawled.
+#
+#  Everything below therefore reasons in WHEEL torque and converts back.
+# ----------------------------------------------------------------------------
+
+DEFAULT_RATIOS = (18.0, 9.59)      # (primary/front, secondary/rear)
+
+
+def _gear_ratios(motors):
+    """(primary, secondary) drive ratios from the motor specs."""
+    if not motors:
+        return DEFAULT_RATIOS
+    g_p = float(motors[0].get("gearRatio") or DEFAULT_RATIOS[0]) or DEFAULT_RATIOS[0]
+    g_s = (float(motors[1].get("gearRatio") or g_p)
+           if len(motors) > 1 else g_p) or g_p
+    return g_p, g_s
+
+
+def beta_to_r(beta, g_p, g_s):
+    """Convert a desired WHEEL-torque fraction to the secondary axle (beta)
+    into the MOTOR-torque fraction r_ch that the FMU consumes.
+
+        T_s = beta*T_wheel/g_s ,  T_p = (1-beta)*T_wheel/g_p
+        r   = T_s / (T_p + T_s)
+
+    Sanity: an EVEN WHEEL split (beta=0.5) at 18:1/9.59:1 needs r = 0.652,
+    not 0.5 - which is precisely the error that over-drove the front axle."""
+    beta = float(np.clip(beta, 0.0, 1.0))
+    t_s = beta / max(g_s, 1e-9)
+    t_p = (1.0 - beta) / max(g_p, 1e-9)
+    tot = t_p + t_s
+    return 0.0 if tot <= 0 else float(np.clip(t_s / tot, 0.0, 1.0))
+
+
+def _load_transfer_beta(T_dem, w_s, g_p, g_s, params):
+    """Wheel-torque fraction for the secondary (rear) axle, accounting for
+    static axle load AND longitudinal load transfer under acceleration.
+
+    Under acceleration weight moves rearward, so the rear axle can carry a
+    larger share of tractive effort while the front loses grip. Sending the
+    split the other way (the current deck behaviour) is what spins the front.
+    """
+    mass = float(params.get("mass_kg", 2746.94))
+    wheelbase = float(params.get("wheelbase_m", 3.094))
+    h_cg = float(params.get("h_cg_m", 0.55))
+    r_tire = float(params.get("r_tire_m", 0.37))
+    front_static = float(params.get("front_load_frac", 0.5))
+
+    # wheel torque this demand can produce if split at the static share
+    t_wheel = T_dem * ((1.0 - front_static) * g_s + front_static * g_p)
+    accel = (t_wheel / max(r_tire, 1e-6)) / max(mass, 1.0)      # m/s^2
+    accel = float(np.clip(accel, 0.0, 8.0))
+    dyn = mass * accel * h_cg / max(wheelbase, 1e-6)            # N transferred
+    rear_load = (1.0 - front_static) * mass * 9.81 + dyn
+    total_load = mass * 9.81
+    beta = float(np.clip(rear_load / total_load, 0.05, 0.95))
+    return beta
 
 
 def _axes_from_deck_map(map_path):
@@ -54,8 +122,18 @@ def _axes_from_deck_map(map_path):
 
 def _motor_eff_interpolator(motor):
     """(w, tau) -> efficiency in (0,1], from a motor spec's efficiency map,
-    plus the motor's max torque envelope at each speed for feasibility."""
-    data = motor_gen.build_motor_data(motor, log=lambda *a: None)
+    plus the motor's max torque envelope at each speed for feasibility.
+
+    IMPORTANT (fixed 2026-07-18): this must resolve the motor data exactly
+    the way fmu_inject does, otherwise the EMS optimises against a different
+    motor than the one actually injected into the FMU. With 'map file is
+    truth' set, the rear SRM's real envelope is 197.6 Nm - sizing the split
+    against the 317.9 Nm field rating would ask for torque it cannot make."""
+    try:
+        import fmu_inject
+        data = fmu_inject._motor_data_for(motor, log=lambda *a: None)
+    except Exception:
+        data = motor_gen.build_motor_data(motor, log=lambda *a: None)
     ws = np.ravel(data["m_map_eff_spd"])
     ts = np.ravel(data["m_map_eff_trq"])
     eff = np.asarray(data["m_eff_map"])           # (n_spd, n_trq)
@@ -124,37 +202,112 @@ def strat_fuzzy(w, T, **k):
     return r
 
 
-def strat_loss_optimal(w, T, motors=None, n_split=21, **k):
-    """At each (w, T_dem) choose the split minimising combined electrical
-    loss, using both motors' efficiency maps. Motoring only; both motors on
-    the same axle-speed grid (identical drive ratios assumed)."""
-    if not motors:
-        raise ValueError("loss_optimal needs the motor specs")
-    eff_p, taumax_p = _motor_eff_interpolator(motors[0])
-    eff_s, taumax_s = _motor_eff_interpolator(motors[1] if len(motors) > 1 else motors[0])
-    splits = np.linspace(0.0, 0.5, n_split)
+def strat_ratio_even(w, T, motors=None, **k):
+    """Even WHEEL-torque split - the ratio-aware replacement for 'even'.
+    With 18:1/9.59:1 this is r_ch = 0.652, not 0.5."""
+    g_p, g_s = _gear_ratios(motors)
+    return np.full((len(w), len(T)), beta_to_r(0.5, g_p, g_s))
+
+
+def strat_traction(w, T, motors=None, params=None, **k):
+    """DEFAULT BASELINE. Distributes WHEEL torque in proportion to the load
+    actually on each axle, including rearward load transfer under
+    acceleration, then converts to r_ch through the drive ratios - and
+    finally clamps to what each motor can physically deliver.
+
+    This is deliberately a simple, physical, disclosable structure - not a
+    model of any production strategy. It gives EMS/drivability work a sane
+    starting point: no axle is asked for more tractive effort than its share
+    of the vehicle's weight can put down, which is what stops the front from
+    spinning up under launch.
+
+    Envelope clamp matters on this vehicle: the front axle can make
+    235.2 Nm x 18 = 4234 Nm at the wheel but the rear only 197.6 x 9.59 =
+    1895 Nm, so at high demand the rear simply cannot take the share that
+    traction alone would want. The clamp keeps the map physically
+    realisable instead of asking for torque the hardware cannot produce."""
+    g_p, g_s = _gear_ratios(motors)
+    p = dict(params or {})
+    envs = None
+    if motors:
+        _, taumax_p = _motor_eff_interpolator(motors[0])
+        _, taumax_s = _motor_eff_interpolator(
+            motors[1] if len(motors) > 1 else motors[0])
+        envs = (taumax_p, taumax_s)
     r = np.zeros((len(w), len(T)))
     for i, ws in enumerate(w):
-        tp_max, ts_max = taumax_p(ws), taumax_s(ws)
+        wp = ws * (g_p / g_s)
         for j, td in enumerate(T):
-            best_r, best_loss = 0.0, np.inf
-            for s in splits:
-                tau_s = s * td
-                tau_p = (1.0 - s) * td
+            beta = _load_transfer_beta(td, ws, g_p, g_s, p)
+            rr = beta_to_r(beta, g_p, g_s)
+            if envs is not None and td > 1e-6:
+                tp_max, ts_max = envs[0](wp), envs[1](ws)
+                if td >= tp_max + ts_max:
+                    # demand exceeds combined capability: both saturate, so
+                    # split in proportion to what each can actually make
+                    rr = ts_max / max(tp_max + ts_max, 1e-9)
+                else:
+                    if rr * td > ts_max:            # secondary over envelope
+                        rr = ts_max / td
+                    if (1.0 - rr) * td > tp_max:    # primary over envelope
+                        rr = 1.0 - tp_max / td
+                rr = float(np.clip(rr, 0.0, 1.0))
+            r[i, j] = rr
+    return r
+
+
+def strat_loss_optimal(w, T, motors=None, n_split=41, params=None, **k):
+    """Minimise electrical cost per unit of WHEEL torque delivered.
+
+    Fixed 2026-07-18 - the previous version had two ratio bugs: it assumed
+    identical drive ratios, and it evaluated BOTH motors at the same speed.
+    In this vehicle a given road speed puts the front motor at 18/9.59 =
+    1.88x the rear motor's speed, and a given motor torque produces very
+    different wheel torque per axle. Both are now handled, and the search is
+    capped by each axle's traction share so the optimum can never ask an
+    axle for more than it can put down."""
+    if not motors:
+        raise ValueError("loss_optimal needs the motor specs")
+    g_p, g_s = _gear_ratios(motors)
+    eff_p, taumax_p = _motor_eff_interpolator(motors[0])
+    eff_s, taumax_s = _motor_eff_interpolator(
+        motors[1] if len(motors) > 1 else motors[0])
+    p = dict(params or {})
+    betas = np.linspace(0.0, 1.0, n_split)
+    r = np.zeros((len(w), len(T)))
+    for i, ws in enumerate(w):
+        wp = ws * (g_p / g_s)           # primary spins faster for same road speed
+        tp_max, ts_max = taumax_p(wp), taumax_s(ws)
+        for j, td in enumerate(T):
+            # wheel torque available if split at the traction-neutral point
+            beta_tr = _load_transfer_beta(td, ws, g_p, g_s, p)
+            t_wheel = td * ((1 - beta_tr) * g_p + beta_tr * g_s)
+            best_b, best_cost = beta_tr, np.inf
+            for b in betas:
+                if b > beta_tr + 0.25 or b < beta_tr - 0.25:
+                    continue        # stay near the traction-feasible region
+                tau_s = b * t_wheel / max(g_s, 1e-9)
+                tau_p = (1.0 - b) * t_wheel / max(g_p, 1e-9)
                 if tau_p > tp_max + 1e-6 or tau_s > ts_max + 1e-6:
-                    continue   # infeasible: a motor is over its envelope
-                loss = tau_p * ws * (1.0 / eff_p(ws, tau_p) - 1.0)
+                    continue
+                p_in = 0.0
+                if tau_p > 0:
+                    p_in += tau_p * wp / eff_p(wp, tau_p)
                 if tau_s > 0:
-                    loss += tau_s * ws * (1.0 / eff_s(ws, tau_s) - 1.0)
-                if loss < best_loss:
-                    best_loss, best_r = loss, s
-            r[i, j] = best_r
+                    p_in += tau_s * ws / eff_s(ws, tau_s)
+                if t_wheel <= 0:
+                    continue
+                cost = p_in / t_wheel        # electrical watts per Nm at wheel
+                if cost < best_cost:
+                    best_cost, best_b = cost, b
+            r[i, j] = beta_to_r(best_b, g_p, g_s)
     return r
 
 
 _STRAT_FUNCS = {
     "even": strat_even, "single_motor": strat_single, "rule": strat_rule,
     "fuzzy": strat_fuzzy, "loss_optimal": strat_loss_optimal,
+    "traction": strat_traction, "ratio_even": strat_ratio_even,
 }
 
 
