@@ -45,13 +45,20 @@ def find_nam(plt_path):
 
 
 def convert(plt_path, mf4_path=None, write_csv=False, log=print,
-            pack_voltage=DEFAULT_PACK_VOLTAGE, serial_number=None):
+            pack_voltage=DEFAULT_PACK_VOLTAGE, serial_number=None,
+            pack_kwh=None, soc_start=None):
     """Convert one .plt (+ .nam) to MF4. Returns the output path.
 
     pack_voltage [V] feeds the EM current estimate (I = Power Demand / V).
     serial_number (int, optional): SimBuilder vehicle-spec fingerprint;
     written as a constant 'VehicleSerial' channel so the MF4 itself
     identifies the exact vehicle config that produced it.
+    pack_kwh / soc_start: recompute BattSOC for the REAL pack. The motor
+    FMU's battery capacity is compiled into its binary (a ~9.5 kWh stand-in),
+    so the FMU's own SOC output drops ~10x too fast and starts at its baked
+    75%. Since the FMU battery is a fixed-loss model, SOC is just the energy
+    integral over capacity - so given the real pack kWh and starting SOC we
+    reconstruct the correct SOC trace from the (correct) BattPower channel.
     """
     nam_path = find_nam(plt_path)
     log("  using names/units from: " + os.path.basename(nam_path))
@@ -61,6 +68,17 @@ def convert(plt_path, mf4_path=None, write_csv=False, log=print,
     if not raw:
         raise ValueError("None of the AVL Drive channels were found - "
                          "is this the right model's .plt?")
+
+    # rebuild SOC for the real pack (see docstring). BattPower is raw W here.
+    if pack_kwh and soc_start is not None and "BattPower" in raw:
+        p_w = raw["BattPower"]                      # W, + discharge / - regen
+        e_wh = np.concatenate([[0.0], np.cumsum(
+            0.5 * (p_w[1:] + p_w[:-1]) * np.diff(times))]) / 3600.0
+        soc = float(soc_start) - e_wh / (float(pack_kwh) * 1000.0)
+        raw["BattSOC"] = np.clip(soc, 0.0, 1.0)     # 0-1; CHANNEL_CONFIG x100
+        log("  BattSOC recomputed for a {:g} kWh pack from {:.0%} start "
+            "(the FMU's own SOC uses a compiled ~9.5 kWh stand-in)".format(
+                pack_kwh, float(soc_start)))
 
     ordered = [c for c in COLUMN_ORDER if c in raw]
     signals = []
