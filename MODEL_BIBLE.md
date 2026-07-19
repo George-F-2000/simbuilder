@@ -491,16 +491,25 @@ the injected split above ~100 km/h. So 111 is high-speed FMU/vcu behaviour
 anything the EMS can touch. *Moral (again): test the hypothesis before
 building the fix — single-motor would have been coded for nothing.*
 
-**The thirst is road load, not driveline — and not the tyre Crr coefficient.**
+**The thirst is road load, not driveline — SOURCE NOT YET IDENTIFIED.**
 Decomposed the clean plateaus: driveline (mech/batt) is a healthy ~0.82; the
 excess is MECHANICAL road load, ~1.6-1.9x idealised physics as a roughly
-constant ~380 N. Cutting the tyre Crr 36% (0.011->0.007) moved battery power
-only 4% — so the excess is NOT QSY1 rolling resistance. Prime suspect: the
-LOAD-DEPENDENT rolling term (QSY7=0.9008) at the prototype's heavy per-corner
-load (6737 N), i.e. genuinely high RR because the vehicle is heavy — plausibly
-physical, matching the ~Crr 0.02 the real car's data implied. NOT confirmed:
-the 3-param v^3+v+c fit is numerically unstable (4 collinear points), so the
-"model matches the car" claim is UNPROVEN and awaits real power-analyzer data.
+constant ~380 N unaccounted force (model 1070 N at 96 km/h vs aero 371 +
+Crr-0.011 RR 296 = 667 N). Ruled OUT so far: (a) driveline/electrical (eff is
+fine); (b) the tyre Crr coefficient — cutting QSY1/3/4 by 36% moved battery
+power only 4%; (c) load-dependent RR (QSY7) — I initially guessed this but the
+arithmetic kills it: per-corner load 6737 N is only 1.087x nominal 6200 N, so
+(Fz/Fn)^0.9 adds ~8%, not 70%. REMAINING candidates, unconfirmed: static
+deck inspection found NO single explicit drag/friction element, but a large
+DISTRIBUTED damping network — 69 Force_Bushing, 8 Force_SpringDamper, plus the
+tyre's own vertical/relaxation damping. That distributed suspension + tyre
+hysteresis dissipation is the likely home of the ~380 N, and it is PHYSICALLY
+REAL — losses a simple aero+Crr hand-calc omits entirely, so the model reading
+higher than textbook physics is partly expected and arguably correct. Still
+not PROVEN to be the ~380 N (would need a per-element energy audit) and still
+not validated against the car. Needs real power-analyzer data. The
+"model matches the real car" idea stays UNPROVEN — the v^3+v+c fit that would
+support it is numerically unstable (4 collinear points). Do not assert it.
 
 **Licence wall:** 5 concurrent solves refused, 4 is the ceiling — throughput
 is gated by licence SEATS not CPU cores. Changes the hardware calculus: more
