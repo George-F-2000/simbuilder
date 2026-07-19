@@ -40,10 +40,26 @@ async function refreshResults(force) {
       ? "" : "No runs with an MF4 found yet — run something first.";
     renderResultsTable();
     drawResultCharts();
+    renderDrivability();
   } catch (e) {
     $("#resHint").textContent = "ERROR: " + e;
   }
 }
+
+/* ---------------- results sub-tabs ---------------- */
+
+function switchResSub(name) {
+  $$("#resSubtabs .subtab").forEach(b =>
+    b.classList.toggle("active", b.dataset.sub === name));
+  ["leaderboard", "drivability", "glossary"].forEach(s =>
+    $("#sub-" + s).classList.toggle("hidden", s !== name));
+  // CSV/refresh tools only make sense on the run-driven panels
+  $(".subtab-tools").style.visibility = name === "glossary" ? "hidden" : "visible";
+  if (name === "drivability") renderDrivability();
+  if (name === "glossary") renderGlossary();
+}
+$$("#resSubtabs .subtab").forEach(b =>
+  b.onclick = () => switchResSub(b.dataset.sub));
 
 function resultsOnEnter() {
   if (!window.pywebview) {
@@ -190,8 +206,130 @@ function drawScatter(rows) {
   ctx.fillText("bottom-left corner wins: efficient AND smooth", mL, 10);
 }
 
+/* ---------------- drivability sub-tab ---------------- */
+
+const DRV_COLS = [
+  ["name", "Run", ""], ["ems", "EMS", ""],
+  ["jerk_rms", "Jerk RMS", "m/s³"], ["jerk_peak", "Jerk peak", "m/s³"],
+  ["arm", "ARM", "m/s²"], ["t_arm", "tARM", "s"],
+  ["accel_rms", "Accel RMS", "m/s²"], ["vdv", "VDV", "m/s¹·⁷⁵"],
+  ["chatter_per_min", "Chatter", "/min"],
+];
+
+function renderDrivability() {
+  const rows = [...resRows].filter(r => r.jerk_rms !== undefined)
+    .sort((a, b) => (a.jerk_rms ?? 1e9) - (b.jerk_rms ?? 1e9));
+  let html = "<thead><tr>" + DRV_COLS.map(([, label, unit]) =>
+    `<th>${label}${unit ? `<span class="u">${unit}</span>` : ""}</th>`).join("") +
+    "</tr></thead><tbody>";
+  if (!rows.length) {
+    html += `<tr><td colspan="${DRV_COLS.length}">No runs with an
+      AccelerationChassis channel yet — run something, or Recompute all.</td></tr>`;
+  }
+  for (const r of rows) {
+    html += "<tr>";
+    for (const [k] of DRV_COLS) {
+      if (k === "ems") {
+        html += `<td><span class="ems-dot" style="background:${emsColor(r.ems)}"></span>${escHtml(r.ems || "")}</td>`;
+      } else if (k === "name") {
+        html += `<td class="drv-name">${escHtml(r.name || "")}</td>`;
+      } else {
+        html += `<td>${fmtCell(r[k])}</td>`;
+      }
+    }
+    html += "</tr>";
+  }
+  $("#drvTable").innerHTML = html + "</tbody>";
+  drawDrivabilityChart();
+}
+
+function drawDrivabilityChart() {
+  const c = $("#drvScatter");
+  if (!c || c.offsetParent === null) return;   // hidden: canvas won't paint
+  const ctx = c.getContext("2d");
+  const W = c.width, H = c.height, mL = 58, mB = 44, mT = 14, mR = 14;
+  chartAxes(ctx, W, H, mL, mB, mT, mR);
+  const pts = resRows.filter(r => r.jerk_rms !== undefined
+    && r.chatter_per_min !== undefined);
+  ctx.font = "10px system-ui"; ctx.fillStyle = "#5a6572"; ctx.textAlign = "center";
+  ctx.fillText("Motor chatter (events/min) →", mL + (W - mL - mR) / 2, H - 8);
+  ctx.save(); ctx.translate(14, mT + (H - mT - mB) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Jerk RMS (m/s³) →", 0, 0); ctx.restore();
+  if (!pts.length) return;
+  const xmax = Math.max(...pts.map(r => r.chatter_per_min), 1) * 1.15;
+  const ymax = Math.max(...pts.map(r => r.jerk_rms), 1) * 1.15;
+  for (const r of pts) {
+    const x = mL + (W - mL - mR) * r.chatter_per_min / xmax;
+    const y = H - mB - (H - mT - mB) * r.jerk_rms / ymax;
+    ctx.fillStyle = emsColor(r.ems);
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = "#33404e"; ctx.textAlign = "left";
+    ctx.fillText((r.name || "").slice(0, 18), x + 8, y + 3);
+  }
+  ctx.fillStyle = "#5a6572"; ctx.textAlign = "left";
+  ctx.fillText("bottom-left wins: smooth AND no chatter", mL, 10);
+}
+
+/* ---------------- glossary ---------------- */
+
+const GLOSSARY = [
+  ["Efficiency", [
+    ["Wh/km", "Net battery energy per kilometre (∫BattPower dt ÷ distance). Regen is included, so it lowers the number. The efficiency headline; lower is better. Needs distance > 50 m to be meaningful."],
+    ["kWh", "Net battery energy over the whole run (∫BattPower dt). Discharge positive, regen negative."],
+    ["ΔSOC %", "Battery state-of-charge drop, start minus end. NOTE: the FMU's internal pack is small (~9 kWh), so ΔSOC is not the real vehicle's — trust the integrated kWh instead."],
+    ["Wh/mi", "Wh/km × 1.609. The US convention; the real prototype measured ~420 Wh/mi on the trapezoidal test."],
+  ]],
+  ["Drivability", [
+    ["Jerk RMS", "Root-mean-square of da/dt (rate of change of longitudinal acceleration), m/s³. The core ride-harshness metric — abrupt torque changes raise it. Lower is smoother."],
+    ["Jerk peak", "Largest single |da/dt| in the run, m/s³. Catches the worst individual shock a smooth RMS can hide."],
+    ["ARM", "Acceleration Response Magnitude — computed here as the 95th-percentile |longitudinal acceleration| (m/s²): how hard the vehicle responds, robust to outliers. ⚠ Best-effort definition — ARM/tARM are not standardised in public sources; confirm against your AVL/lab convention and this formula will be adjusted."],
+    ["tARM", "Acceleration Response Time — computed here as the 10→90% rise time (s) of the strongest tip-in (largest sustained positive-acceleration event): how quickly torque builds. ⚠ Best-effort definition, same caveat as ARM."],
+    ["Accel RMS", "RMS of longitudinal acceleration, m/s². A ride-comfort proxy (ISO-2631 uses a frequency-weighted acceleration; this is the unweighted form)."],
+    ["VDV", "Vibration Dose Value, (∫a⁴ dt)^0.25, m/s¹·⁷⁵. Weights big transients more heavily than RMS — a standard whole-body discomfort measure."],
+    ["Chatter/min", "Motor on/off transitions per minute (|EM torque| crossing 2 N·m). The classic loss-optimal-EMS drivability sin — a strategy that saves energy by rapidly toggling a motor feels bad. The drivability axis of the Pareto plot."],
+  ]],
+  ["Vehicle & provenance", [
+    ["Serial (SN-…)", "A deterministic fingerprint (FNV-1a hash) of the entire vehicle spec — motors, gearing, mass, tire, pack, EMS, and every ⚡ checkbox. Same spec = same serial, always. Written into every MF4 as the VehicleSerial channel so a result can be matched to the exact car that made it."],
+    ["Serial ✓ / ⚠MISMATCH", "Cross-check between the run's vehicle.json and the MF4's embedded VehicleSerial. ⚠ means the recorded config and the solved config disagree — do not trust that row."],
+    ["Track RMSE", "For cycle runs (UDDS/HWFET): RMS speed error vs the target trace, km/h. Doubles as the VALIDITY GATE — above ~2 km/h the driver couldn't follow the cycle and the Wh/km is meaningless."],
+    ["Vmax", "Peak vehicle speed reached in the run, km/h."],
+  ]],
+  ["Powertrain & EMS", [
+    ["EMS strategy", "How combined torque demand is split between the two axles. deck_default (the model's own map), traction (ratio-aware, load-based baseline), loss_optimal (min electrical loss), rule/fuzzy/even/single_motor."],
+    ["r_ch", "The torque-split map inside the motor FMU: fraction of the combined MOTOR-torque demand sent to the SECONDARY (rear) axle. 0 = front only, 0.5 = even MOTOR torque. Because the axles are geared 18:1 vs 9.59:1, an even WHEEL split is r_ch = 0.652, not 0.5."],
+    ["traction split", "The ratio-aware baseline (added 2026-07-19): divides WHEEL torque by axle load including weight transfer, then converts to r_ch through the drive ratios, then clamps to each motor's real envelope. Fixes the front-axle over-drive the deck's own map caused."],
+    ["Map is truth", "Per-motor toggle: when a full motor-data .mat is uploaded, use ITS measured torque envelope verbatim; the kW/N·m/rpm fields become display-only for that motor."],
+    ["Map coverage %", "How much of the injected motor efficiency map is measured data vs synthetic fill. Uncovered (light-load) cells are filled with a scaled model — disclosed per run in the log."],
+  ]],
+  ["Run modes & numerics", [
+    ["Deck as-is", "🏁 master toggle: run the model exactly as exported from MotionView, skipping every ⚡ override. For validating the stock model against real drive data."],
+    ["Creep start", "The model cannot initialise at exactly v = 0, so scenarios floor the start speed at 0.9 km/h. The driver regulates to the demand immediately."],
+    ["h_max", "Maximum solver time step, s. Floored at 10 ms — the model's validated resolution; finer isn't needed and coarser is flagged."],
+    ["Deck default (EMS)", "Leaves the deck's built-in torque-split map untouched. NOTE: on this vehicle it over-drives the front axle on any acceleration — invalid for cycles; use the traction split."],
+  ]],
+];
+
+function renderGlossary() {
+  const filt = ($("#glossFilter").value || "").trim().toLowerCase();
+  let html = "";
+  for (const [group, items] of GLOSSARY) {
+    const hits = items.filter(([term, def]) =>
+      !filt || term.toLowerCase().includes(filt) || def.toLowerCase().includes(filt));
+    if (!hits.length) continue;
+    html += `<div class="gloss-group"><h3>${escHtml(group)}</h3>`;
+    for (const [term, def] of hits) {
+      html += `<div class="gloss-item"><dt>${escHtml(term)}</dt>
+        <dd>${escHtml(def)}</dd></div>`;
+    }
+    html += "</div>";
+  }
+  $("#glossBody").innerHTML = html ||
+    `<p class="hint">No terms match “${escHtml(filt)}”.</p>`;
+}
+
 /* ---------------- wiring ---------------- */
 
+$("#glossFilter").oninput = renderGlossary;
 $("#btnResRefresh").onclick = () => refreshResults(false);
 $("#btnResRecompute").onclick = () => refreshResults(true);
 $("#btnResExport").onclick = async () => {

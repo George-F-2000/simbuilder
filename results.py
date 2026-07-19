@@ -50,6 +50,60 @@ def _get(m, name):
         return None
 
 
+def drivability_metrics(t, a, jerk):
+    """Longitudinal drivability numbers from the chassis acceleration trace.
+
+    Standard, well-defined:
+      jerk_peak   max |da/dt|                                    [m/s^3]
+      accel_rms   RMS of a (ride-comfort proxy; ISO-2631 uses a
+                  frequency-weighted a, this is the unweighted form)  [m/s^2]
+      vdv         vibration dose value (integral a^4 dt)^0.25      [m/s^1.75]
+
+    Best-effort (definitions NOT standardised in public sources - George to
+    confirm against the AVL/lab convention; the formula is shown in-app):
+      arm   Acceleration Response Magnitude = 95th-pctile |a|      [m/s^2]
+      t_arm Acceleration Response Time = 10->90% rise time of the
+            strongest tip-in (largest sustained positive-a event)  [s]
+    """
+    out = {}
+    a = np.asarray(a, float)
+    out["jerk_peak"] = round(float(np.max(np.abs(jerk))), 2)
+    out["accel_rms"] = round(float(np.sqrt(np.mean(a ** 2))), 3)
+    out["vdv"] = round(float(np.trapezoid(a ** 4, t) ** 0.25), 3)
+    out["arm"] = round(float(np.percentile(np.abs(a), 95)), 3)
+
+    # t_arm: find the strongest positive-acceleration tip-in and time its
+    # 10->90% rise. Robust to noise via a light smoothing window.
+    try:
+        n = len(a)
+        if n > 20:
+            w = max(3, n // 200)
+            sm = np.convolve(a, np.ones(w) / w, mode="same")
+            # split into positive-accel runs, score by (peak x duration)
+            pos = sm > 0.2
+            best, cur = None, None
+            for k in range(n):
+                if pos[k]:
+                    cur = cur or k
+                elif cur is not None:
+                    peak = sm[cur:k].max()
+                    score = peak * (t[k - 1] - t[cur])
+                    if best is None or score > best[0]:
+                        best = (score, cur, k)
+                    cur = None
+            if best:
+                _, i0, i1 = best
+                seg_t, seg_a = t[i0:i1], sm[i0:i1]
+                pk = seg_a.max()
+                lo = np.where(seg_a >= 0.1 * pk)[0]
+                hi = np.where(seg_a >= 0.9 * pk)[0]
+                if len(lo) and len(hi):
+                    out["t_arm"] = round(float(seg_t[hi[0]] - seg_t[lo[0]]), 3)
+    except Exception:
+        pass
+    return out
+
+
 def metrics_from_mf4(mf4_path, run_name):
     m = MDF(mf4_path)
     try:
@@ -78,9 +132,12 @@ def metrics_from_mf4(mf4_path, run_name):
 
         az = _get(m, "AccelerationChassis")
         if az is not None and len(az.timestamps) > 10:
-            dt = np.diff(np.asarray(az.timestamps, dtype=float))
-            jerk = np.diff(np.asarray(az.samples, dtype=float)) / np.maximum(dt, 1e-6)
+            at = np.asarray(az.timestamps, dtype=float)
+            a = np.asarray(az.samples, dtype=float)          # m/s^2 longitudinal
+            dt = np.diff(at)
+            jerk = np.diff(a) / np.maximum(dt, 1e-6)          # m/s^3
             out["jerk_rms"] = round(float(np.sqrt(np.mean(jerk ** 2))), 3)
+            out.update(drivability_metrics(at, a, jerk))
 
         # motor on/off chatter (drivability sin of aggressive EMS maps)
         trans = 0
