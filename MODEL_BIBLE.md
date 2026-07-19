@@ -116,6 +116,34 @@ correct (heavier) mass and correct tire/aero, absolute Wh/km should MOVE
 from the old 255.6. Re-run the HWFET baseline on SN-2499411196 and compare
 against real figures on the §5 equal basis; that number is the real one.
 
+## 4b. The road-load anchor (independent realism check)
+
+Before trusting ANY absolute Wh/km from the solver, compute what pure
+road-load physics says the same vehicle should consume, and require the
+run to land near it. Physics-only HWFET battery-out prediction
+(`roadload_anchor.py`), for reference (2026-07-18):
+
+| config | Wh/km |
+|---|---|
+| stock-est (2650 kg, CdA 0.60, Crr 0.008) | 138 |
+| prototype (2747, CdA 0.728, Crr 0.008) | 162 |
+| prototype + realistic tyre (Crr 0.010) | ~185 |
+| prototype worst-case (Crr 0.012, weak regen) | 203 |
+
+- **The prototype target is ~180–190 Wh/km battery-out unadjusted.** A
+  solver run far above that is losing energy somewhere unphysical
+  (artifact); far below means an input is too soft.
+- **NO phantom parasitic load exists** — verified: at true coast
+  (|shaft power|<0.5 kW) battery median = 0.003 kW. The old 0.62
+  integrated chain efficiency was the CHATTERING driver operating in
+  inefficient transients, not an accessory draw. Fixed by the driver tune.
+- **The old 255.6 was too HIGH** (above worst-case physics) — chatter
+  inflation, not a realistic thirsty result. The realistic prototype
+  number is LOWER than the old buggy one even though inputs got worse.
+- **Prototype IS worse than stock** (~185 vs ~138, a defensible ~35%
+  penalty from mass + CdA + tyre) — the real "worse than stock" claim,
+  just don't measure it against the old buggy 255.
+
 ## 5. Comparison bases (the units bible)
 
 To compare our MF4 numbers with published LYRIQ figures:
