@@ -214,12 +214,72 @@ def _mat_bytes(d):
     return buf.getvalue()
 
 
-def _rewrite_fmu(src, dest, front_data, rear_data, front_m, rear_m, log):
+def _md_start(md, name):
+    """Read the start= value of a modelDescription ScalarVariable by name."""
+    m = re.search(r'name="{}".*?start="([^"]+)"'.format(re.escape(name)),
+                  md, re.S)
+    return float(m.group(1)) if m else None
+
+
+def _md_set(md, name, value):
+    """Replace the start= value of a named ScalarVariable (first match)."""
+    def repl(mo):
+        return re.sub(r'(start=")[^"]+(")',
+                      r'\g<1>{:.6g}\g<2>'.format(value), mo.group(0), count=1)
+    return re.sub(r'<ScalarVariable[^>]*name="{}".*?</ScalarVariable>'
+                  .format(re.escape(name)), repl, md, count=1, flags=re.S)
+
+
+def patch_battery_md(md, battery, log=None):
+    """Retune the motor FMU's battery start values to a target pack.
+
+    ⚠ INEFFECTIVE against MotionSolve: the FMU's scalar parameters are
+    compiled into libsb_Dual_Motor_Powertrain_VCU.dll and read through the
+    FMI interface, not from modelDescription.xml - so editing the start=
+    values here does NOT change the running battery (verified 2026-07-19:
+    SOC still began at the compiled 75% and drained at the ~9.5 kWh rate).
+    Kept for reference / in case a future deck sets FMU parameters. The
+    real fix lives in converter.convert(), which reconstructs BattSOC for
+    the true pack from the (correct) BattPower integral. Battery params
+    change the SOC readout and current estimate ONLY - never Wh/km, because
+    the FMU's loss fraction is fixed and SOC-independent."""
+    kwh = float(battery.get("packKWh") or 0)
+    volt = float(battery.get("nominalV") or 0)
+    soc = battery.get("soc")
+    if kwh <= 0 or volt <= 0:
+        return md
+    ser = ((_md_start(md, "num_cells_per_module_series") or 1)
+           * (_md_start(md, "num_modules_pack_series") or 1))
+    par = ((_md_start(md, "num_cells_per_module_parallel") or 1)
+           * (_md_start(md, "num_modules_pack_parallel") or 1))
+    cell_v = volt / ser
+    cell_ah = kwh * 1000.0 / (volt * par)
+    md = _md_set(md, "nominal_voltage_cell", cell_v)
+    md = _md_set(md, "capacity_cell", cell_ah)
+    if soc is not None:
+        md = _md_set(md, "SOC_initial", float(soc))
+    if log:
+        log("    FMU battery <- {:.0f} kWh / {:.0f} V nominal ({:.0f}s x "
+            "{:.0f}p: cell {:.3f} V, {:.2f} Ah){}".format(
+                kwh, volt, ser, par, cell_v, cell_ah,
+                ", SOC {:.0%}".format(float(soc)) if soc is not None else ""))
+    return md
+
+
+def _rewrite_fmu(src, dest, front_data, rear_data, front_m, rear_m, log,
+                 battery=None):
     """Copy the FMU zip from src to dest, replacing its internal motor_data /
-    motor_char resources. All other entries are preserved byte-for-byte."""
+    motor_char resources (and battery start values if given). All other
+    entries are preserved byte-for-byte."""
     with zipfile.ZipFile(src) as zin:
         infos = zin.infolist()
         blobs = {i.filename: zin.read(i.filename) for i in infos}
+
+    if battery:
+        for name in list(blobs):
+            if name.lower().endswith("modeldescription.xml"):
+                md = blobs[name].decode("utf-8", "replace")
+                blobs[name] = patch_battery_md(md, battery, log).encode("utf-8")
 
     for name in list(blobs):
         low = name.lower()
@@ -255,6 +315,13 @@ def inject_motor_fmu(deck_text, run_dir, spec, log):
     front_m = motors[0]
     rear_m = motors[1] if len(motors) > 1 else motors[0]
 
+    # NOTE: the battery capacity/voltage/SOC are NOT injectable here - they are
+    # compiled into the FMU binary (libsb_Dual_Motor_Powertrain_VCU.dll), not
+    # read from the .mat resources, so rewriting modelDescription.xml has no
+    # effect (MotionSolve uses the compiled defaults). SOC is instead rebuilt
+    # for the real pack in converter.convert(); see patch_battery_md's note.
+    battery = None
+
     for m in FMU_REF_RE.finditer(deck_text):
         native = m.group(2).replace("/", os.sep)
         if not os.path.isfile(native):
@@ -270,7 +337,8 @@ def inject_motor_fmu(deck_text, run_dir, spec, log):
         front_data = _motor_data_for(front_m, log)
         rear_data = _motor_data_for(rear_m, log)
         dest = os.path.join(run_dir, os.path.basename(native))
-        _rewrite_fmu(native, dest, front_data, rear_data, front_m, rear_m, log)
+        _rewrite_fmu(native, dest, front_data, rear_data, front_m, rear_m, log,
+                     battery=battery)
         new_ref = m.group(1) + dest.replace("\\", "/") + m.group(3)
         deck_text = deck_text.replace(m.group(0), new_ref, 1)
         log("  vehicle: motor FMU rebuilt in run folder and re-pointed ({})"
