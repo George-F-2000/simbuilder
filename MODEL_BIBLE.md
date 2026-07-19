@@ -472,24 +472,45 @@ splits silently over-drive the higher-ratio axle.*
 wheel, rear only 198x9.59 = 1895 Nm — the vehicle is inherently front-biased
 in capability, so no strategy can put an even wheel split down at high demand.
 
-## Ch. 15 — (open) High-speed two-motor fight + the licence wall (2026-07-19)
+## Ch. 15 — What the split can't fix, and where the thirst lives (2026-07-19)
 
-Overnight on the repaired vehicle: traction split validated clean at 50/56/
-89/96 km/h (slip <2%, sane power) — but 111 km/h settles into a NEW failure:
-holds speed while drawing 470 kW with the front at 80 Nm/14.6k rpm and the
-rear regenerating to cancel it — a two-motor CIRCULATING-POWER fight, distinct
-from the tyre bind (slip only +2.2%). Hypothesis under test: at high-speed/
-low-demand, *sharing* is wrong and the split should go single-motor
-(loss_optimal / single_motor runs launched to confirm). HWFET rows: traction
-split 361.6 Wh/km at RMSE 1.97 (just passes the 2.0 gate) = campaign baseline
-row #1; deck-default 944 Wh/km at RMSE 11.82 = INVALID (the front-axle bind
-wrecks tracking on any cycle with acceleration) — so the ratio-aware split is
-REQUIRED, not optional. **Licence wall found:** 5 concurrent solves is
-refused, 4 is the ceiling — throughput is gated by licence SEATS, not CPU
-cores, which changes the hardware calculus (more machines buy nothing against
-a floating pool of 4; confirm floating-vs-node-locked with Altair before
-spending). A licence-aware queue (`queue_runner.py`) now waits for a seat
-before launching — the seed of the farm scheduler. Model still runs ~1.5-2x
-thirsty vs physics/measured; the open F2 question (total road load vs added
-aero) is the largest single assumption. Write the ending when 111 is fixed
-and the consumption gap is decomposed.
+Overnight + morning on the repaired vehicle. Traction split VALIDATED clean
+50/56/89/96 km/h (slip <2%, power scaling sensibly) — that band is the model's
+trustworthy envelope. HWFET rows: traction split 361.6 Wh/km at RMSE 1.97
+(passes the 2.0 gate) = campaign baseline row #1; deck-default 944 Wh/km at
+RMSE 11.82 = INVALID (the front over-drive wrecks tracking on any cycle with
+acceleration) — so the ratio-aware split is REQUIRED, not optional.
+
+**111 km/h is NOT a torque-split problem — hypothesis refuted by experiment.**
+I thought high-speed sharing caused a two-motor fight fixable by single-motor.
+Ran traction, single_motor AND loss_optimal at 111: all three gave
+BYTE-IDENTICAL results (471 kW, front 78 / rear 181 Nm). single_motor commands
+r_ch=0 (rear off) yet the rear still makes 181 Nm — proving the FMU IGNORES
+the injected split above ~100 km/h. So 111 is high-speed FMU/vcu behaviour
+(prime suspect: rear SRM at 7642 rpm = 85% of its 9000 rpm envelope), not
+anything the EMS can touch. *Moral (again): test the hypothesis before
+building the fix — single-motor would have been coded for nothing.*
+
+**The thirst is road load, not driveline — and not the tyre Crr coefficient.**
+Decomposed the clean plateaus: driveline (mech/batt) is a healthy ~0.82; the
+excess is MECHANICAL road load, ~1.6-1.9x idealised physics as a roughly
+constant ~380 N. Cutting the tyre Crr 36% (0.011->0.007) moved battery power
+only 4% — so the excess is NOT QSY1 rolling resistance. Prime suspect: the
+LOAD-DEPENDENT rolling term (QSY7=0.9008) at the prototype's heavy per-corner
+load (6737 N), i.e. genuinely high RR because the vehicle is heavy — plausibly
+physical, matching the ~Crr 0.02 the real car's data implied. NOT confirmed:
+the 3-param v^3+v+c fit is numerically unstable (4 collinear points), so the
+"model matches the car" claim is UNPROVEN and awaits real power-analyzer data.
+
+**Licence wall:** 5 concurrent solves refused, 4 is the ceiling — throughput
+is gated by licence SEATS not CPU cores. Changes the hardware calculus: more
+machines buy nothing against a floating pool of 4; confirm floating-vs-node-
+locked with Altair before spending the $3k. `queue_runner.py` (waits for a
+seat before launching) is the seed of the farm scheduler.
+
+OPEN for George: (1) the FMU's high-speed logic (why r_ch is ignored >100
+km/h); (2) the F2 question (total road load vs added aero); (3) real power-
+analyzer data to validate road load; (4) the torque-split log (does the real
+car park a motor? is there an axle DISCONNECT the rigid-coupler model can't
+represent?). Write the ending when >100 km/h runs and the road load is
+confirmed against real data.
