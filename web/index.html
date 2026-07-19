@@ -457,28 +457,62 @@
 <!-- ============================= RESULTS TAB ============================= -->
 <main id="tab-results" class="hidden">
   <section class="res-full">
-    <div class="card">
-      <div class="adf-head">
-        <h2>Results — campaign leaderboard
-          <span class="hint">one row per run in the runs folder</span></h2>
-        <div class="run-tools">
-          <button id="btnResRefresh" class="ghost">Refresh</button>
-          <button id="btnResRecompute" class="ghost"
-            title="Ignore the cache and recompute every run's metrics">Recompute all</button>
-          <button id="btnResExport" class="ghost">Export CSV…</button>
-        </div>
+    <div class="subtabs" id="resSubtabs">
+      <button class="subtab active" data-sub="leaderboard">Leaderboard</button>
+      <button class="subtab" data-sub="drivability">Drivability</button>
+      <button class="subtab" data-sub="glossary">Glossary</button>
+      <div class="run-tools subtab-tools">
+        <button id="btnResRefresh" class="ghost">Refresh</button>
+        <button id="btnResRecompute" class="ghost"
+          title="Ignore the cache and recompute every run's metrics">Recompute all</button>
+        <button id="btnResExport" class="ghost">Export CSV…</button>
       </div>
-      <p class="hint" id="resRunsDir"></p>
-      <p class="hint" id="resHint">Available inside the SimBuilder app.</p>
-      <div id="resTableWrap"><table id="resTable"></table></div>
+    </div>
+    <p class="hint" id="resRunsDir"></p>
+    <p class="hint" id="resHint">Available inside the SimBuilder app.</p>
+
+    <!-- ---- LEADERBOARD ---- -->
+    <div id="sub-leaderboard" class="subpanel">
+      <div class="card">
+        <div id="resTableWrap"><table id="resTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Comparisons
+          <span class="hint">Wh/km by run (color = EMS strategy) · efficiency vs drivability</span></h2>
+        <canvas id="resBar" width="1100" height="240"></canvas>
+        <canvas id="resScatter" width="1100" height="300"></canvas>
+        <div id="resLegend" class="hint"></div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Comparisons
-        <span class="hint">Wh/km by run (color = EMS strategy) · efficiency vs drivability</span></h2>
-      <canvas id="resBar" width="1100" height="240"></canvas>
-      <canvas id="resScatter" width="1100" height="300"></canvas>
-      <div id="resLegend" class="hint"></div>
+    <!-- ---- DRIVABILITY ---- -->
+    <div id="sub-drivability" class="subpanel hidden">
+      <div class="card">
+        <h2>Drivability metrics
+          <span class="hint">longitudinal ride quality, per run — lower is smoother</span></h2>
+        <p class="hint">Computed from each run's <code>AccelerationChassis</code> and
+          motor-torque channels. The <b>ARM / tARM</b> definitions are best-effort
+          (not standardised in public sources) — see the Glossary and correct them
+          if your AVL/lab convention differs.</p>
+        <div id="drvTableWrap"><table id="drvTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Smoothness map
+          <span class="hint">jerk vs motor chatter — the two axes of drivability</span></h2>
+        <canvas id="drvScatter" width="1100" height="300"></canvas>
+        <div id="drvLegend" class="hint"></div>
+      </div>
+    </div>
+
+    <!-- ---- GLOSSARY ---- -->
+    <div id="sub-glossary" class="subpanel hidden">
+      <div class="card">
+        <h2>Glossary
+          <span class="hint">what every number and term in SimBuilder means</span></h2>
+        <input type="text" id="glossFilter" class="gloss-filter"
+          placeholder="filter terms… (e.g. jerk, r_ch, serial)" spellcheck="false">
+        <div id="glossBody"></div>
+      </div>
     </div>
   </section>
 </main>
