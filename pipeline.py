@@ -803,14 +803,20 @@ def run_scenario(settings, scenario_name, adf_text, log, progress=None,
     # vehicle serial -> constant VehicleSerial channel in the MF4, so the
     # result file itself proves which vehicle config produced it
     serial_number = None
-    serial_text = ((vehicle or {}).get("spec") or {}).get("serial", "")
+    spec0 = (vehicle or {}).get("spec") or {}
+    serial_text = spec0.get("serial", "")
     digits = re.sub(r"\D", "", str(serial_text))
     if digits:
         serial_number = int(digits)
+    # real pack for the SOC reconstruction (the FMU's is a compiled ~9.5 kWh
+    # stand-in). Defaults to the stock LYRIQ AWD pack at the 30% SOC limit.
+    pack_kwh = float(spec0.get("packKWh") or 0) or None
+    soc_start = spec0.get("packSOCstart", 0.30) if pack_kwh else None
     mf4_path = convert(plt_path, log=log,
                        pack_voltage=float(settings.get(
                            "pack_voltage", DEFAULT_PACK_VOLTAGE)),
-                       serial_number=serial_number)
+                       serial_number=serial_number,
+                       pack_kwh=pack_kwh, soc_start=soc_start)
     if viewer_launcher is False:
         log("Viewer not opened (batch mode).")
     elif viewer_launcher is not None:
