@@ -420,11 +420,76 @@ maps filled, physics sane. New campaign vehicle: **SN-2499411196**.
 a time, each disclosed for exactly what it is — measurement where we have
 it, honest model where we don't.*
 
-## Ch. 13 — (open) The real baseline
+## Ch. 13 — The tyre I broke, and the 335 kW ghost (2026-07-18/19)
 
-Standing work: re-run the HWFET on SN-2499411196 (tuned driver + prototype
-tyre/aero/mass + filled maps) — THE defensible baseline row #1 — then the
-parallel EMS sweep. Compare Wh/km to real LYRIQ figures on the §5 equal
-basis and write down how far off, and why. When the number is honest and
-explained, this chapter — and the validation section of the thesis — is
-done. Write the ending when it happens.
+The rebuilt vehicle read a physically impossible 352 kW at a steady 100 km/h
+cruise — 18x what road-load physics allows, and cleanly converged, which is
+worse than noise because the model had settled into a wrong equilibrium. The
+wheel-speed telltale: front axle (18:1) implied a wheel speed 15% higher than
+the rear, spinning against the road and dissipating ~335 kW in tyre scrub.
+
+The bisection took a full day and one false conclusion. I claimed the bind
+was high-speed-only and drivability was therefore safe; the direct 80 km/h
+test refuted me (7.2x over physics there too) — *never generalise a "clean"
+verdict from a run you only eyeballed; measure the operating point you
+actually care about.* The stock deck at 50 km/h was clean (H=9e-3), my
+config at 50 was fine (10.6 vs 8.7 kW), so it was mine and load-dependent.
+
+Root cause: **I broke the tyre.** I had "dimension-scaled" a tyre that was
+already a correct 265/50R20, and in doing so changed FNOMIN and INFLPRES —
+the constants the Pacejka force coefficients are *fitted against*. Rescaling
+them without re-fitting silently reduces grip, and the shortfall grows with
+load, which is exactly why it hid at 50 km/h and detonated at 100. Fix:
+start from the deck's ORIGINAL tyre, change ONLY rolling resistance (QSY1/3/4
+-> Crr 0.011 for the Pilot Sport 4 SUV) and the FZMAX validity limit (12400
+-> 16000, needed because the 2747 kg prototype overloads the donor's range
+during settling and the cap made statics non-convergent). Result at 80 km/h:
+slip +20% -> -1.4%, power 89 -> 24 kW. *Moral: a .tir's coefficients are
+fitted against its normalisation constants — touch FNOMIN/INFLPRES and you
+silently rebuild the force model. Change rolling resistance and validity
+limits only; never the normalisation.*
+
+## Ch. 14 — The split that divided the wrong torque (2026-07-19)
+
+With grip fixed, a launch to 100 km/h still collapsed — the car stuck at
+10.2 km/h with the front wheels spinning at +1972%. A SECOND, independent
+bug: the deck's torque-split map (r_ch) divides **motor** torque, but the
+axles multiply it by 18:1 vs 9.59:1, so an "even" motor split puts 68% of
+the WHEEL torque on the front — exactly as rearward weight transfer unloads
+it. The deck's own default map had this flaw. Fix: a ratio-aware `traction`
+strategy that splits WHEEL torque by axle load (incl. load transfer),
+converts back through the ratios (an even wheel split is r_ch=0.652, NOT
+0.5), and clamps to each motor's real envelope. loss_optimal was fixed too
+(it had assumed equal ratios AND evaluated both motors at the same speed —
+a given road speed puts the front motor at 1.88x the rear's). Also fixed:
+the EMS was sizing against the field ratings while the FMU runs the
+file-truth envelope, so it optimised for a motor that wasn't there. Launch
+to 100 km/h after: holds 100.1 km/h, slip -1.4%, 35.7 kW. *Moral: on a
+mixed-ratio multi-motor vehicle, ALWAYS reason in wheel torque; motor-torque
+splits silently over-drive the higher-ratio axle.*
+
+**Hardware truth this exposed:** front axle can make 235x18 = 4234 Nm at the
+wheel, rear only 198x9.59 = 1895 Nm — the vehicle is inherently front-biased
+in capability, so no strategy can put an even wheel split down at high demand.
+
+## Ch. 15 — (open) High-speed two-motor fight + the licence wall (2026-07-19)
+
+Overnight on the repaired vehicle: traction split validated clean at 50/56/
+89/96 km/h (slip <2%, sane power) — but 111 km/h settles into a NEW failure:
+holds speed while drawing 470 kW with the front at 80 Nm/14.6k rpm and the
+rear regenerating to cancel it — a two-motor CIRCULATING-POWER fight, distinct
+from the tyre bind (slip only +2.2%). Hypothesis under test: at high-speed/
+low-demand, *sharing* is wrong and the split should go single-motor
+(loss_optimal / single_motor runs launched to confirm). HWFET rows: traction
+split 361.6 Wh/km at RMSE 1.97 (just passes the 2.0 gate) = campaign baseline
+row #1; deck-default 944 Wh/km at RMSE 11.82 = INVALID (the front-axle bind
+wrecks tracking on any cycle with acceleration) — so the ratio-aware split is
+REQUIRED, not optional. **Licence wall found:** 5 concurrent solves is
+refused, 4 is the ceiling — throughput is gated by licence SEATS, not CPU
+cores, which changes the hardware calculus (more machines buy nothing against
+a floating pool of 4; confirm floating-vs-node-locked with Altair before
+spending). A licence-aware queue (`queue_runner.py`) now waits for a seat
+before launching — the seed of the farm scheduler. Model still runs ~1.5-2x
+thirsty vs physics/measured; the open F2 question (total road load vs added
+aero) is the largest single assumption. Write the ending when 111 is fixed
+and the consumption gap is decomposed.
