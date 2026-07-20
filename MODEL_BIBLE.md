@@ -472,6 +472,44 @@ splits silently over-drive the higher-ratio axle.*
 wheel, rear only 198x9.59 = 1895 Nm — the vehicle is inherently front-biased
 in capability, so no strategy can put an even wheel split down at high demand.
 
+## Ch. 16 — Overnight program: one real win, one exposed bug, one failure (2026-07-20)
+
+Ran 10 jobs 4-wide (parallel, licence-aware). Honest scorecard:
+
+**WIN - driveaway initialisation floor is MUCH lower than believed.** The
+model initialises and launches from VX0 as low as 10 mm/s = **0.036 km/h**
+(tested 100/50/20/10 mm/s, all OK) - essentially a dead standstill. My
+earlier claim that only 0.9 km/h (250 mm/s) worked was WRONG: the July-17
+bisection jumped 0 -> 250 and never tested between. So driveaway-from-~0 is
+far more tractable than feared - the init barrier is basically just exactly
+v=0, not "below ~1 km/h". Caveats: launches are SLOW (~230 s wall for 8 s
+sim - standstill stiffness) and a hard launch may still hit the front-axle
+bind. But the blocker I thought existed largely doesn't.
+
+**EXPOSED BUG - the EMS sweep is corrupted by the front-axle bind, NOT a
+clean Pareto.** On the 43-90 km/h segment: even 458, traction 472,
+loss_optimal 456 Wh/km = SANE (both motors engaged, EM1/EM2 rms balanced,
+batt <100 kW). But rule / fuzzy / single_motor ALL gave byte-identical 1360
+Wh/km with EM1 rms 88 / EM2 rms 1.9 / batt max 573 kW - i.e. they all
+collapsed to FRONT-ONLY (r_ch~0) at these light-moderate demands, which
+over-drives the 18:1 front axle into the tyre-scrub bind. deck_default too
+(front-heavy, 1344 Wh/km). So any front-biased split triggers the model's
+front-axle bind and the runs become identical garbage regardless of the
+actual strategy - the same "bind swamps the strategy" signature as the 111
+km/h case. LESSON: only splits that keep BOTH motors engaged (even /
+ratio-aware) are comparable; front-only operation is a MODEL artifact
+(a real car runs the front motor solo at cruise fine), so the sweep tells
+us about the model's bind fragility, not the strategies' real merit. The
+Pareto is NOT valid until the front-axle bind is fixed for all splits, not
+just the ratio-aware ones.
+
+**FAILURE - coastdown still won't run.** Starting at 90 km/h fixed the
+statics failure (statics COMPLETED), but the open-loop zero-pedal COAST
+maneuver still fails in dynamics. Thirst decomposition (tyre+aero vs
+drivetrain of the ~350 N excess) remains OPEN - the open-loop-coast ADF
+approach isn't working on this driver; needs a different method (e.g. a
+force-element to null traction, or extracting tyre-force channels directly).
+
 ## Ch. 15 — What the split can't fix, and where the thirst lives (2026-07-19)
 
 Overnight + morning on the repaired vehicle. Traction split VALIDATED clean
