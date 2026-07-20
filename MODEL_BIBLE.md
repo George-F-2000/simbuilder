@@ -523,3 +523,21 @@ analyzer data to validate road load; (4) the torque-split log (does the real
 car park a motor? is there an axle DISCONNECT the rigid-coupler model can't
 represent?). Write the ending when >100 km/h runs and the road load is
 confirmed against real data.
+
+**★ CRUCIAL STANDING PRIORITY — DRIVEAWAY FROM 0 km/h (George, 2026-07-19):**
+Driveaway evaluation can ONLY be done from a true standstill, so the v=0
+behaviour we've been side-stepping is on the critical path, not optional.
+Two blockers, both already characterised: (a) the model CANNOT initialise at
+exactly v=0 (DASPK singular at the tyre's 0/0 slip - bisected: VXLOW and
+ENGINE_INIT_SPEED do NOT fix it, only a rolling start does), so runs use a
+0.9 km/h creep floor; (b) standstill is numerically stiff (~1e-5 steps).
+For driveaway the creep floor may be too far from a true standstill-release
+(tyre preload / driveline lash take-up is part of what's being evaluated).
+PLAN, cheapest first: (1) binary-search the MINIMUM creep VX0 that still
+initialises - if ~0.1 km/h works, driveaway from it is faithful enough;
+(2) static-hold-then-release (brake held at t=0, released) to dodge the
+free-v=0 DAE singularity; (3) MF-Swift standstill/parking low-speed mode +
+MotionSolve init settings; (4) an Altair support question (George's academic
+contact - standstill MF-Swift init is a known topic). A single launch event
+is short, so the stiffness cost is bounded (unlike a full stop-and-go cycle).
+This is a focused research task, NOT a quick patch - schedule it deliberately.
