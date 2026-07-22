@@ -5,3 +5,8 @@ __pycache__/
 
 # machine/user state (local paths, pack voltage) - not project code
 settings.json
+
+# transient build / launch logs
+_build*.log
+_fromsource.log
+_viewertest.log
