@@ -168,6 +168,12 @@ def strat_single(w, T, **k):
     return np.zeros((len(w), len(T)))
 
 
+def strat_rear_only(w, T, **k):
+    """All combined MOTOR torque to the SECONDARY (rear, 9.59:1) axle.
+    Diagnostic mirror of single_motor for road-load / driveline studies."""
+    return np.ones((len(w), len(T)))
+
+
 def strat_rule(w, T, threshold_nm=250.0, target_share=0.5, **k):
     """Single motor until demand exceeds threshold, then ramp linearly to
     target_share by the top of the demand range."""
@@ -305,7 +311,8 @@ def strat_loss_optimal(w, T, motors=None, n_split=41, params=None, **k):
 
 
 _STRAT_FUNCS = {
-    "even": strat_even, "single_motor": strat_single, "rule": strat_rule,
+    "even": strat_even, "single_motor": strat_single, "rear_only": strat_rear_only,
+    "rule": strat_rule,
     "fuzzy": strat_fuzzy, "loss_optimal": strat_loss_optimal,
     "traction": strat_traction, "ratio_even": strat_ratio_even,
 }
