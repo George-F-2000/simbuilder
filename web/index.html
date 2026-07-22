@@ -17,6 +17,7 @@
     <button class="tab" data-tab="motor">Motor Builder</button>
     <button class="tab" data-tab="scenario">Scenario Builder</button>
     <button class="tab" data-tab="results">Results</button>
+    <button class="tab" data-tab="live">Live</button>
   </nav>
   <div class="header-actions">
     <button id="btnTheme" class="ghost" title="Toggle dark mode">🌙</button>
@@ -517,6 +518,50 @@
   </section>
 </main>
 
+<main id="tab-live" class="hidden">
+  <section class="live-wrap">
+    <div class="card">
+      <h2>Live telemetry
+        <span class="hint">watch the solver stream channels as it runs — like a logger in the car</span></h2>
+      <div id="liveStatus" class="live-status">
+        Idle — start a run, or scan for one already solving (even one this app
+        didn't launch). You'll watch the solver advance live; the channel curves
+        fill in when it finishes.
+      </div>
+      <div class="live-scan">
+        <button id="liveScanBtn" class="ghost">↻ Scan for runs</button>
+        <button id="liveAddFolderBtn" class="ghost">+ Add folder to scan</button>
+        <span id="liveScanNote" class="hint">scan to find live &amp; recent runs</span>
+      </div>
+      <div id="liveRunList" class="live-run-list"></div>
+      <div class="live-vitals" id="liveVitals">
+        <div class="vtile"><div class="vv tnum" id="vtSim">—</div><div class="vl">sim time (s)</div></div>
+        <div class="vtile"><div class="vv tnum" id="vtPct">—</div><div class="vl">complete</div></div>
+        <div class="vtile"><div class="vv tnum" id="vtWall">—</div><div class="vl">wall (s)</div></div>
+        <div class="vtile"><div class="vv tnum" id="vtH">—</div><div class="vl">step H (s)</div></div>
+        <div class="vtile"><div class="vv tnum" id="vtOrder">—</div><div class="vl">order</div></div>
+        <div class="vtile"><div class="vv tnum" id="vtPhi">—</div><div class="vl">residual Φ</div></div>
+      </div>
+      <canvas id="liveHealth" width="1100" height="150"></canvas>
+      <div class="live-health-cap">Solver health — step size <b>H</b> vs sim time (log scale). Dips = the solver working hard through a stiff region.</div>
+      <div class="live-body">
+        <div class="live-plot-col">
+          <canvas id="livePlot" width="1100" height="420"></canvas>
+          <div id="liveLegend" class="live-legend"></div>
+        </div>
+        <aside class="live-side">
+          <div class="live-side-head">
+            Signals <span id="liveChanCount" class="hint"></span>
+          </div>
+          <input type="text" id="liveChanFilter" class="gloss-filter"
+            placeholder="filter signals…" spellcheck="false">
+          <div id="liveChanList" class="live-chan-list"></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
 <template id="motorTemplate">
   <div class="card motor-card">
     <h3 class="motor-title">Motor</h3>
@@ -599,5 +644,6 @@
 <script src="vehicle.js"></script>
 <script src="motorbuilder.js"></script>
 <script src="results.js"></script>
+<script src="live.js"></script>
 </body>
 </html>

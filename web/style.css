@@ -593,3 +593,72 @@ body.dark .tab.active, body.dark .tab:hover { color: var(--accent); }
    chart/preview label stays readable in dark mode */
 body.dark canvas { background: #eef1f5; border-radius: 8px; }
 body.dark #carSvg { background: #eef1f5; border-radius: 8px; }
+
+/* ---------------- Live telemetry tab ---------------- */
+/* the Live tab is one wide panel, not the builder's 460px+1fr split */
+main#tab-live { grid-template-columns: 1fr; }
+.live-wrap { max-width: 1400px; }
+.live-status {
+  font-size: 13px; padding: 8px 12px; border-radius: 8px; margin: 4px 0 12px;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--line);
+}
+.live-status.pending { color: var(--warn-ink); background: var(--warn-bg);
+  border-color: transparent; }
+.live-status.streaming { color: var(--accent); font-weight: 600;
+  border-color: var(--accent); }
+.live-scan { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; flex-wrap: wrap; }
+.live-scan .hint { margin-left: 4px; }
+.live-run-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
+  max-height: 168px; overflow-y: auto; }
+.live-run { display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.live-run .rdot { width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: var(--muted); }
+.live-run.live .rdot { background: #3fb27f; box-shadow: 0 0 0 3px #3fb27f33;
+  animation: livepulse 1.4s infinite; }
+.live-run.done .rdot { background: var(--accent); }
+@keyframes livepulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.live-run .rn { flex: 1 1 auto; font-size: 13px; font-weight: 600; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.live-run .rmeta { font-size: 11px; color: var(--muted); font-family: var(--mono);
+  white-space: nowrap; }
+.live-run .rattach { font-size: 12px; padding: 3px 12px; border: 1px solid var(--accent);
+  color: var(--accent); background: transparent; border-radius: 6px; cursor: pointer; }
+.live-run.live .rattach { background: var(--accent); color: var(--accent-ink); }
+.live-vitals { display: flex; gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
+.vtile { flex: 1 1 90px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 9px; padding: 8px 10px; text-align: center; }
+.vtile .vv { font-size: 19px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.vtile .vl { font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .05em; margin-top: 2px; }
+#liveHealth { width: 100%; height: auto; display: block; border-radius: 8px; }
+body.dark #liveHealth { background: #171a1e; }
+.live-health-cap { font-size: 11.5px; color: var(--muted); margin: 5px 0 14px; }
+.live-body { display: flex; gap: 16px; align-items: flex-start; }
+.live-plot-col { flex: 1 1 auto; min-width: 0; }
+/* the live plot paints its own theme background in JS - override the global
+   light-canvas rule so the instrument look holds in dark mode */
+#livePlot { width: 100%; height: auto; border-radius: 8px; display: block; }
+body.dark #livePlot { background: #171a1e; }
+.live-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+.live-tag { font-size: 12px; color: var(--ink); display: inline-flex;
+  align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.live-tag i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.live-tag b { font-weight: 600; }
+.live-side { flex: 0 0 300px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px; background: var(--card); }
+.live-side-head { font-size: 13px; font-weight: 600; margin-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: baseline; }
+.live-chan-list { max-height: 360px; overflow-y: auto; margin-top: 8px;
+  display: flex; flex-direction: column; gap: 1px; }
+.live-chan { display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+  padding: 4px 6px; border-radius: 6px; cursor: pointer; color: var(--muted); }
+.live-chan:hover { background: var(--bg); }
+.live-chan.on { color: var(--ink); }
+.live-chan input { margin: 0; }
+.live-chan .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.live-chan .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.live-chan .un { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+@media (max-width: 900px) { .live-body { flex-direction: column; }
+  .live-side { flex-basis: auto; width: 100%; } }
