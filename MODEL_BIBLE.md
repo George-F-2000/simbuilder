@@ -579,3 +579,124 @@ MotionSolve init settings; (4) an Altair support question (George's academic
 contact - standstill MF-Swift init is a known topic). A single launch event
 is short, so the stiffness cost is bounded (unlike a full stop-and-go cycle).
 This is a focused research task, NOT a quick patch - schedule it deliberately.
+
+## Ch. 17 — The decomposition at last, and a contradiction with Ch. 15 (2026-07-20)
+
+After coastdown, coast-mining and tyre-Fx all failed, the thirst finally
+decomposed with a clean method. (Tyre-Fx failed because rolling resistance is
+a wheel MOMENT, not a contact-patch force - summing tyre Fx never captures it;
+the "clean 96 km/h" number from that method is RETRACTED.)
+
+**Method that worked: steady-speed force accounting + a QSY-halving lever.**
+Ran single_motor / rear_only / even at a held speed, read mech shaft power
+(w x T) and divided by v for tractive force. Then copied the tyre to a
+THROWAWAY file with QSY1/QSY3/QSY4 HALVED and re-ran: the force the halving
+removes is exactly half the tyre's QSY rolling resistance, so 2 x dF =
+baseline tyre RR and the remainder is everything else. Gospel tyre untouched.
+
+**RESULT 1 - no steady-state bind. This CORRECTS Ch. 16.** All three splits at
+steady 50 km/h run clean: front-only 754 N, even 776 N, rear-only 806 N -
+every one bound=False, slip <2%. Front-only does NOT bind at steady cruise.
+The 573 kW / 1360 Wh/km "front-only bind" in Ch. 16 was a TRANSIENT artifact of
+the ramped 43-90 segment, not a structural property of the 18:1 axle. The bind
+is demand/transient-triggered, not a steady front-only state - so steady
+cross-split comparisons ARE valid and the Pareto is less corrupted than Ch. 16
+feared. (Bonus: front-only is the most efficient cruise, 11.7 kW vs 13.8 kW
+rear-only - the front AAM beats the rear SRM at this operating point.)
+
+**RESULT 2 - the decomposition (data, both speeds consistent).** Halving QSY
+dropped tractive force 203 N @50 and 221 N @70 (battery -25% / -22%). So the
+754 N at 50 km/h splits as:
+  - aero ................................. 100 N (13%)
+  - tyre QSY rolling resistance ......... ~406 N (54%)   [= 2 x 203]
+  - residual driveline + suspension damp  ~248 N (33%)
+At 70: aero 197, tyre ~442, residual ~256. The residual is ~250 N and roughly
+speed-flat - consistent with the distributed damping (69 Force_Bushing, 8
+Force_SpringDamper) + tyre hysteresis Ch. 15 fingered. BOTH earlier claims were
+wrong: the tyre is NOT the whole story (my error earlier today), and it is NOT
+ruled out (Ch. 15's claim) - it is the LARGEST single piece (~54%) and a strong
+lever.
+
+**CONTRADICTION with Ch. 15 - FLAGGED, NOT RESOLVED.** Ch. 15 records "cutting
+QSY1/3/4 by 36% moved battery power only 4%." This session's 50% cut moved
+battery 22-25% and force ~27%, and the ~200 N drop matches the QSY formula
+(halving ~377 N ~= 190 N) almost exactly. The two disagree by ~5x. This
+session's is a clean single-speed steady measurement, tyre file verified
+halved, force moving proportionally - trust it. Ch. 15's 4% is the SUSPECT
+number: probably measured over the HWFET cycle (aero/transient/braking-
+dominated, tyre RR a smaller share) or the modified tyre never reached the
+solver that run. RECONCILE before acting: re-run the halved tyre over Ch. 15's
+exact context (HWFET or the 96 km/h battery plateau) and see which sensitivity
+holds. Until then neither figure is settled.
+
+**REALISM note (do NOT act yet).** Baseline effective Crr @50 = 0.024 (2x the
+tyre's nominal 0.011); the QSY piece alone is ~0.015, the residual damping adds
+~0.009. Halving QSY brings 50 km/h cruise 234 -> 176 Wh/km, closer to a
+realistic Lyriq. BUT the residual damping is arguably physically real, and the
+420 Wh/mi target is a different condition - so this is a calibration lever to
+WEIGH once reconciled and once real power-analyzer data exists, not licence to
+change the gospel tyre.
+
+**LESSON (logged for the thesis-writer).** I re-litigated a question the bible
+had already recorded, got excited about "it's the tyre" before re-reading
+Ch. 15, then over-corrected to "the bible says it's NOT the tyre." The DATA
+says: mostly tyre, meaningfully damping, and Ch. 15's specific 4% is probably
+wrong. Read your own notes first - then trust a clean experiment over a
+remembered conclusion, including your own.
+
+OPEN: (1) reconcile the QSY-sensitivity contradiction (halved tyre over HWFET);
+(2) real power-analyzer data to anchor the true tyre-vs-damping split and the
+absolute Crr; (3) the transient trigger of the front-axle bind (steady is clean,
+so it's a tip-in/ramp effect) still uncharacterised.
+
+## Ch. 18 — The locked sensible baseline (2026-07-20)
+
+Directive from George: "get a model that makes sense down as fast as humanly
+possible." Stopped decomposing, made one defensible calibration, validated,
+locked it.
+
+**THE ONE CALIBRATION: tyre LMY 1 -> 0.75.** LMY is the tyre's own rolling-
+resistance scale factor (one clean knob, does NOT touch the fitted Pacejka
+grip coefficients - the Ch. 13 lesson). Ch. 17 measured the tyre's effective
+cruise Crr at ~0.015, load-inflated above the PS4SUV rated ~0.011; 0.75 scales
+it back to rated. This is calibration to the tyre's REAL spec, not fudging to a
+curve. Gospel tyre backed up first (LYRIQ_PS4SUV_265_50R20.tir.bak_pre_LMY_*)
+and the change annotated in-line. DELIBERATELY LEFT ALONE: the ~250 N
+suspension/tyre damping (physically real, Ch. 15/17) and the grip model.
+
+**VALIDATION - traction (ratio-aware) split, calibrated tyre, steady:**
+  50 km/h : 11.4 kW -> 228 Wh/km, slip <1.7%, bound=False
+  70 km/h : 19.3 kW -> 276 Wh/km, slip <1.8%, bound=False
+  90 km/h : statics-from-standstill init failure (NOT a model flaw - the test
+            ADF starts AT 90 from rest; the DAE won't initialise there. High-
+            speed points need a ramp-up ADF, as the earlier 96 km/h plateau
+            used. Envelope for steady-from-rest is ~<=70-85 km/h.)
+
+**VERDICT: this is the locked baseline.** It runs clean and bind-free across
+its envelope, tracks commanded speed, splits torque sanely, and consumes a
+number that scales correctly with speed. The absolute Wh/km is ~20-30% above an
+idealised aero+Crr hand-calc - and that is EXPECTED, not a bug: it is the real
+suspension/tyre damping (Ch. 17), amplified by the heavy 2747 kg prototype and
+30% SOC (lower pack voltage -> higher current -> more I^2R loss). A model that
+reads slightly above textbook for a heavy instrumented prototype is defensible;
+a model that matched textbook would be hiding real losses. "Makes sense" =
+physically grounded + stable + explainable, and this is.
+
+**THE LOCKED BASELINE SPEC (what to run, every time):**
+  - mass 2746.94 kg; motors: AAM front 18:1, SRM rear 9.59:1 (SRM map = truth)
+  - tyre LYRIQ_PS4SUV_265_50R20.tir with LMY 0.75; aero LYRIQ_aero_dyno.aae
+    (CdA 0.868, A=B=0)
+  - EMS: traction (ratio-aware) split - REQUIRED for cycle tracking (Ch. 15);
+    NOTE single-motor is more efficient at STEADY cruise (front AAM alone: 50
+    km/h single 11.7 kW vs split 11.4 - comparable here, but on transient
+    cycles the split is what tracks). A cruise-vs-demand EMS would trim cruise
+    thirst - future work, not needed for "sensible".
+  - battery: stock LYRIQ AWD characteristics, SOC CAPPED at 30%
+  - init: rolling start; steady-from-rest good to ~70-85 km/h, ramp ADF above.
+
+**IF a LOWER absolute number is ever REQUIRED (not needed for "sensible"):**
+levers in order of honesty/effort - (1) real power-analyzer data to confirm
+whether the ~250 N damping is truly real or partly over-damped bushings; (2) a
+cruise/demand EMS that runs single-motor at steady speed; (3) revisit the
+distributed damping network (structural, 69 bushings - slow, do only with data).
+Do NOT chase the number by detuning grip or inventing coefficients.
