@@ -1,0 +1,184 @@
+{
+ "source": "EVC_DQ_ARM_tARM_Targets_SSB_Edits_20250117.xlsx (Mobility Challenge / EV Challenge Y4)",
+ "arm": {
+  "speeds_kph": [
+   0,
+   2,
+   6,
+   10,
+   20,
+   30,
+   40,
+   50,
+   60,
+   70,
+   80,
+   100,
+   120,
+   140
+  ],
+  "pedal_curves_ms2": {
+   "10": [
+    0.9922,
+    0.9289,
+    0.8022,
+    0.6333,
+    0.38,
+    0.1583,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "20": [
+    1.6044,
+    1.5411,
+    1.4144,
+    1.2878,
+    0.9922,
+    0.7389,
+    0.5383,
+    0.4117,
+    0.285,
+    0.2006,
+    0.1161,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "30": [
+    2.1006,
+    2.0372,
+    1.9106,
+    1.7944,
+    1.5094,
+    1.2667,
+    1.0767,
+    0.9394,
+    0.8022,
+    0.6861,
+    0.5806,
+    0.3694,
+    0.1794,
+    0.0
+   ],
+   "40": [
+    2.5122,
+    2.4594,
+    2.3539,
+    2.2483,
+    1.995,
+    1.7839,
+    1.615,
+    1.4778,
+    1.3406,
+    1.2033,
+    1.0661,
+    0.7811,
+    0.5172,
+    0.3061
+   ],
+   "50": [
+    2.8922,
+    2.85,
+    2.7656,
+    2.6811,
+    2.4806,
+    2.3011,
+    2.1533,
+    2.0161,
+    1.8894,
+    1.7311,
+    1.5622,
+    1.2033,
+    0.8656,
+    0.6017
+   ]
+  },
+  "offset1": 0.25,
+  "offset2": 0.5,
+  "score_window_idx": {
+   "10": [
+    2,
+    6
+   ],
+   "20": [
+    2,
+    8
+   ],
+   "30": [
+    2,
+    9
+   ],
+   "40": [
+    2,
+    10
+   ],
+   "50": [
+    2,
+    11
+   ]
+  },
+  "scoring": "per point: |target-meas|<0.25 -> 1.0; <0.5 -> 0.75; else if accel>=0 -> 0.5; accel<0 -> 0; class=mean; total=mean(5 classes) x points(20)"
+ },
+ "tarm": {
+  "pedal_pct": [
+   10,
+   20,
+   30,
+   40,
+   50,
+   60,
+   100
+  ],
+  "tarm_ms3": [
+   3,
+   6.25,
+   9.25,
+   11.75,
+   14,
+   15,
+   15
+  ],
+  "response_delay_s": [
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "offset1": 1.0,
+  "offset2": 2.0,
+  "scoring": "0.5*present + 0.25*|diff|<2 + 0.25*|diff|<1, mean over classes"
+ },
+ "delay": {
+  "definition": "time from accel-pedal movement to accel reaching +0.3 m/s2 above start",
+  "accel_offset_ms2": 0.3,
+  "target_s": 0.3,
+  "scoring": "fraction of classes with delay < target"
+ },
+ "preprocessing": {
+  "movmean_accel": "Butterworth low-pass on LngAccel (fs 100 Hz)",
+  "accel_grad": "gradient(MovMeanAccel)*100 -> m/s3"
+ },
+ "event_extraction": {
+  "tip_in": "in Drive & pedal gradient>60 %/s & pedal>5%",
+  "from_stop": "v < 5 kph at tip-in",
+  "rolling": "v > 5 kph"
+ },
+ "other_metrics": [
+  "Road Load Pedal Position",
+  "Time to 90% Peak Accel (ideal 0.7-0.9s)",
+  "Peak Acceleration",
+  "Accel at 2s",
+  "Avg Accel over 3s",
+  "Kick",
+  "Jerk"
+ ]
+}
