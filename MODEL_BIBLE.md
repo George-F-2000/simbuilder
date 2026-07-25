@@ -194,10 +194,59 @@ Validity gates per run:
 - serial cross-check ✓ on the Results tab;
 - eyeball VehicleSpeed + EM torques in the viewer for driver chatter.
 
-## 8. Known artifacts & open items (2026-07-18)
+## 8. Known artifacts & open items (updated 2026-07-24)
 
+**STRUCTURAL (diagnosed, not fixable from outside — see Ch. 20/23):**
+- **Transient over-consumption ~+35%** on real stop-and-go (model 256 vs
+  measured 190 Wh/km on the MCT chunk). Steady cruise matches (+4%). The
+  kill-list is complete: motor efficiency (real AAM/SRM maps confirm ~80%
+  at light load is GENUINE), parasitics (0 kW at idle), wheel slip (~0),
+  effective inertia (2319 kg regression — LOW, not high), aero (−4%),
+  mass (−9 Wh/km), split (−4%), integrator tolerance (tight tol makes it
+  WORSE: 302). Lives in the deck/FMU/tyre transient path. Use the model
+  for steady consumption + drivability; treat stop-go cycle energy as an
+  over-estimate.
+- **Zero-throttle shuffle ringing (regen-ON only)**: sustained regen
+  (~130/86 Nm) through the near-undamped driveline (deck warns residual
+  stiffness CCX/CCY ≈ 0) continuously excites a ~2.4 Hz shuffle mode —
+  motor shaft rings to NEGATIVE rpm while wheels stay smooth; battery
+  power churns ±500–1100 kW. NOT fixable by input shaping (1–2 s release
+  ramps: no change). Regen-OFF model sidesteps it entirely.
+- **No pack power limit in the FMU**: 100% pedal peaks 679 kW (real pack
+  ~200–230). ≥90% pedal is physics-unlimited; cap quantitative work at
+  ≤80% or use a performance-equivalent pedal.
+- **VCU calibration is SEALED**: pedal_0_regen_percent, traction_gamma,
+  coast params are `variability="fixed"` — compiled into the VCU DLL.
+  modelDescription.xml patches are IGNORED at runtime; values are not in
+  the deck nor the resource mats. A true change needs the Activate source
+  (`one_strlineacc`) re-exported.
+- **Tyre road contact is hardwired FLAT**: the per-wheel "road property
+  file string" entries feed the Altair road service (pothole/polyline/CRG
+  all parse and load) but tnodelft::DTYRE contact never changes — 7-run
+  evidence, CG-Z flat over a loaded 5% CRG grade. roadBuilder parked.
+- **v=0 standstill singularity**: MF-Tyre slip 1/Vx + relaxation. Recipe:
+  creep floor 250 mm/s (+ relaxation-off USE_MODE 104 for stop-crossing
+  cycles); near-standstill DWELL is safe (regen self-limits to ~0 torque).
+  UDDS-class cycles with full stops still need the recipe + patience.
+
+**INTERFACE (documented mappings, physics untouched):**
+- **Pedal axis ~2.4–3× soft vs the real car** (traction_gamma = 2, i.e.
+  torque ∝ pedal² — suspected, unverified). Real 25–30% pedal sustains
+  108 km/h; model needs ~50%. Anchors: ~5 kW cruise = model 30% ↔ real
+  12%; 77 km/h = model 40% ↔ real 22%; 105 km/h = model 50% ↔ real 27%.
+  Planned fix: inverse-gamma pedal linearization wrapper (input mapping).
+- **Coast pedal = 20%**: the VCU's genuine zero-torque coast state at
+  speed (band ≈15–30%). Regen-OFF tip-outs lift to 20%, not 0%.
+- **VehSpd_VCU channel**: sensor-floor emulation (<1 km/h → 0), matching
+  the prototype's CAN. Raw VehicleSpeed kept alongside. Driveaway events
+  use a 5 s 0%-pedal dwell (decays to ~0.1–0.4 km/h, reads 0).
+- **Regen channel**: binary model-mode flag in every MF4 (1 = regen-ON
+  model, 0 = regen-OFF), like the prototype's CAN signal.
+
+**LEGACY (pre-validation era, still true):**
 - **ΔSOC column is fiction**: the FMU's internal pack is ~9 kWh (SOC fell
   75→28% on one HWFET). Use integrated kWh; ignore SOC % until scaled.
+  (The converter reconstructs SOC for the real 102 kWh pack since Ch. 16.)
 - **Driver pedal chatter (4–5 Hz) during decels**: the driver bang-bangs
   between 0% pedal (hard regen) and ~18% because gentle decels sit between
   its two levers. Pollutes jerk/chatter drivability metrics. KEY FACT: on
@@ -700,3 +749,130 @@ whether the ~250 N damping is truly real or partly over-damped bushings; (2) a
 cruise/demand EMS that runs single-motor at steady speed; (3) revisit the
 distributed damping network (structural, 69 bushings - slow, do only with data).
 Do NOT chase the number by detuning grip or inventing coefficients.
+
+## Ch. 19 — The overnight that mapped the envelope (2026-07-20→21)
+
+Thirteen runs queued 4-wide against the locked baseline while George slept.
+The metrics logger had a numpy bug (np.trapz removed) so every run logged
+"FAIL" while solving perfectly — all numbers recovered from the MF4s, and a
+units lesson learned the hard way: **BattPower is in kW** (the first recovery
+pass divided by 1000 twice and reported a 2.7-tonne SUV cruising on 0.5 Wh/km).
+
+**Driveaway sweep — the crucial-priority answer:** clean launches from the
+creep floor at 1.1 / 1.5 / 2.2 m/s² (80–167 kW); 2.8 m/s² trips ~235 kW.
+Later refined: clean at 2.9, binds at 3.0 (~200 kW). (Ch. 22 reframes what
+that "bind" actually was.)
+
+**Steady curve, anchored-hold profile:** 20→112, 30→125, 40→139, 50→158,
+60→179, 70→204, 85→247, 100→296 Wh/km. **This SUPERSEDES Ch. 18's 228@50** —
+the Ch. 18 profile was sparse and AKIMA-overshot the hold (measured on the
+overshoot/regen shoulder); the anchored holds are the trustworthy curve, and
+the MCT validation (Ch. 20) later confirmed the low curve at city speed.
+
+**HWFET pair:** calibrated tyre 311.6 Wh/km vs original tyre 361.6 — the LMY
+calibration is worth +16% over a full cycle. Ch. 15 vs 17 contradiction:
+settled, Ch. 17 was right. **UDDS died at t=38 s** (first sustained near-zero
+crawl — the v=0 disease, Ch. 21). even/loss_optimal splits died on HWFET;
+only the ratio-aware traction split survives a highway cycle.
+
+## Ch. 20 — Ground truth arrives: the MCT log (2026-07-21→22)
+
+George produced the real thing: a 3.5 h AVL-dyno multicycle CAN log from the
+prototype (132 km, 0–109 km/h, HVAC/lights off). Energy method sanity: SOC
+28 pts for 26.0 kWh → implied usable pack **92.9 kWh** — a real LYRIQ pack.
+Real consumption: **197 Wh/km** overall; accessories a negligible 0.39 kW.
+
+**Where the model stands against the car:** steady city segment +4% (validated
+— the calibrated tyre earns its keep on real data). But the model run over the
+EXACT measured speed trace of a city stop-and-go chunk: **256 vs 190 Wh/km,
++35%**. And the kill-list that followed is the most instructive failure hunt
+of the project — every plausible cause executed in order: real AAM/SRM
+efficiency maps (uploaded by George) prove ~80% at light load is GENUINE, not
+a map artifact; parasitic draw zero; slip dissipation zero; effective-mass
+regression 2319 kg (below physical — inertia is not the thief); pure-aero
+Cd 0.28 buys −4%; dyno test mass −9 Wh/km; even split −4%; and the numerical
+probe (integr_tol 0.001→1e-4) made it WORSE (302 — the converged physics is
+thirstier). **Verdict: structural, in the deck/FMU/tyre transient path.**
+Wrong theories confessed along the way: the efficiency map (real maps
+refuted), the v=0 recipe as confound (relax-ON control identical), and a
+tidy "three gaps" story that the data dismantled to one.
+
+## Ch. 21 — v=0: from death to recipe (2026-07-21)
+
+The standstill singularity finally cornered: MF-Tyre slip carries Vx in the
+denominator and USE_MODE's +10 relaxation adds a 1/Vx stiffness; the DAE
+Jacobian degenerates at v→0. A/B'd on an identical stop-hold-relaunch
+profile: VXLOW 0.1→1.0→2.5 no help; DAMP_VLOW 50× WORSE; **relaxation OFF
+(USE_MODE 104) is the lever** — full step size to the stop. Neither knob
+alone suffices at a true 0; the working recipe is **relaxation-off + never
+command below the 250 mm/s creep floor**. Proof: a 50 s UDDS chunk cleared
+the exact t=38 s death point at full H and wrote clean output. Costs: no
+transient tyre fidelity while relax-off (energy work only, never handling),
+and creep-idle stretches solve slowly. Near-standstill DWELL (0% pedal,
+regen self-limits to zero torque) is safe indefinitely — the singularity
+bites only when forced THROUGH zero under load.
+
+## Ch. 22 — Drivability validated, the bind reframed (2026-07-22→23)
+
+Two batches (14 launches, decels, bind refinement) plus the AVL tip-in
+machinery (the Scenario Builder's JS ADF generator ported to Python,
+validated 116/116 functional lines against a stock reference, VX0
+creep-floored). Then the reframe that changed the ceiling: **open-loop
+pedal launches at 90/100% complete cleanly at 4.3–6.0 m/s²** — the
+"3.0 m/s² bind" was a closed-loop speed-follower phenomenon, not a torque
+or traction wall. Confessed en route: a "394 kW tip-in bind" that was
+actually the COAST phase artifact mis-attributed (check WHEN a spike
+happens before naming it).
+
+**The pedal map, measured against the car:** the MCT log contains the real
+pedal (never above 46% in 3.5 h; 25–30% sustains 108 km/h). The model's
+staircase (10% won't move … 40% = 77 km/h … 50% = 104 km/h) lands **~2.4×
+soft** — same physics at matched operating points, compressed pedal axis
+(VCU traction_gamma = 2, torque ∝ pedal², suspected). Model launch vs the
+real prototype: ~9.7 s to 100 km/h vs sub-9 s to 60 mph with the SAME
+AAM+SRM — validated, not lucky. 100% pedal does 0–100 in 5.3 s but at
+679 kW — the missing pack limit (§8).
+
+## Ch. 23 — Two models: the regen saga (2026-07-23→24)
+
+George: start regen-free, like the prototype's regen-off mode; keep both
+models, cleanly separated. The direct route died four deaths: the VCU's
+pedal_0_regen_percent ([0,−50,−50,−25] over [0,4.27,25.64,55.55] m/s) is in
+modelDescription.xml but `variability="fixed"` — patched 4-of-4 and IGNORED
+at runtime (bit-identical output); not in the deck; not in the resource
+mats; compiled into libsb_Dual_Motor_Powertrain_VCU.dll. The indirect route
+won: a descending-staircase run mapped the VCU's own **coast state — 20%
+pedal = exactly 0.0 Nm at speed** (band ≈15–30%; regen begins ≤10%).
+**Regen-OFF model = lift to COAST_PEDAL 0.20** — validated on the harshest
+tip-out (70%→coast, 0.3 s, from 80): **p2p 0 kW** (vs 1044 regen-ON), decel
+0.24 m/s² = road load to the decimal. Regen-ON tip-outs stay artifact-bound
+(the Ch. 8/§8 shuffle mode; input shaping refuted). Every MF4 now carries a
+binary **Regen** channel (1/0) like the prototype's CAN. The generator takes
+`regen_off=True`. A true 0%-pedal regen-off awaits the Activate source.
+
+## Ch. 24 — Driveaway signal, the DQ decoder, and the plan (2026-07-24)
+
+**Driveaway events:** AVL needs the speed signal to START at 0. Solution
+that isn't a fudge: a 5 s 0%-pedal dwell (car decays to ~0.1–0.4 km/h,
+solver-safe per Ch. 21) + a **VehSpd_VCU** channel with the real signal
+chain's sensor floor (<1 km/h → 0 — the prototype's own CAN does exactly
+this; its log min is 0.00 sharp). Raw VehicleSpeed kept beside it.
+
+**The regen-OFF AVL deliverable:** 8/8 full tip-in/tip-out maneuvers at
+45–100% pedal, every coast phase clean (p2p 5–27 kW), stamped Regen=0 —
+in `PhD Thesis\AVL Drive Tip-Ins RegenOFF`.
+
+**The DQ decoder:** EVC_DriveQuality.mlapp cracked open (CDATA in the OPC
+package). Full metric spec extracted with the actual EV Challenge targets
+(dq_targets.json): ARM curves per pedal class with ±0.25/±0.5 banded
+scoring, tARM targets 3→15 m/s³, response delay 0.3 s (pedal → +0.3 m/s²),
+Butterworth preprocessing, tip-in auto-extraction (pedal grad > 60%/s).
+Sober note: the targets live on the REAL pedal axis — scored raw, the
+model's soft pedal tanks ARM; scored through the ÷2.4 map it lands near
+target. The SimBuilder DQ tab will report both.
+
+**The standing plan:** (1) dwell batch → Monday's scoring, (2) Drive
+Quality tab in SimBuilder (auto-scored, dual-axis), (3) "make the car
+behave normally" — pedal linearization (inverse-gamma wrapper, verified
+against the MCT pedal map), performance-equivalent pedal for the missing
+pack limit, and the documented-limitations ledger above.
