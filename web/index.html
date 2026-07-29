@@ -461,6 +461,7 @@
     <div class="subtabs" id="resSubtabs">
       <button class="subtab active" data-sub="leaderboard">Leaderboard</button>
       <button class="subtab" data-sub="drivability">Drivability</button>
+      <button class="subtab" data-sub="drivequality">Drive Quality</button>
       <button class="subtab" data-sub="glossary">Glossary</button>
       <div class="run-tools subtab-tools">
         <button id="btnResRefresh" class="ghost">Refresh</button>
@@ -506,6 +507,40 @@
     </div>
 
     <!-- ---- GLOSSARY ---- -->
+    <!-- ---- DRIVE QUALITY ---- -->
+    <div id="sub-drivequality" class="subpanel hidden">
+      <div class="card">
+        <h2>Drive Quality <span class="hint">EV Challenge scoring — ARM,
+          tARM and response delay per tip-in class</span></h2>
+        <div class="run-tools">
+          <button id="btnDqPick" class="ghost">Score an MF4…</button>
+          <button id="btnDqFolder" class="ghost">Score a folder…</button>
+          <span class="hint" id="dqHint">Pick a run MF4 (or a folder of
+            them) to score against the competition targets.</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Scores <span class="hint">points as the MATLAB app computes
+          them · both pedal axes</span></h2>
+        <div id="dqScoreWrap"><table id="dqScoreTable"></table></div>
+        <p class="hint">
+          <b>raw</b> classes the event by its commanded pedal.
+          <b>mapped</b> classes it by the real-car-equivalent pedal
+          (calibration layer, MODEL_BIBLE §8). The gap between them is the
+          pedal-interface penalty, not vehicle response.
+        </p>
+      </div>
+      <div class="card">
+        <h2>Events <span class="hint">every detected tip-in</span></h2>
+        <div id="dqEventWrap"><table id="dqEventTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>ARM <span class="hint">acceleration vs speed against the target
+          band for each scored event</span></h2>
+        <canvas id="dqArmChart" height="260"></canvas>
+      </div>
+    </div>
+
     <div id="sub-glossary" class="subpanel hidden">
       <div class="card">
         <h2>Glossary
@@ -644,6 +679,7 @@
 <script src="vehicle.js"></script>
 <script src="motorbuilder.js"></script>
 <script src="results.js"></script>
+<script src="dq.js"></script>
 <script src="live.js"></script>
 </body>
 </html>

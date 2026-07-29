@@ -51,11 +51,14 @@ async function refreshResults(force) {
 function switchResSub(name) {
   $$("#resSubtabs .subtab").forEach(b =>
     b.classList.toggle("active", b.dataset.sub === name));
-  ["leaderboard", "drivability", "glossary"].forEach(s =>
+  ["leaderboard", "drivability", "drivequality", "glossary"].forEach(s =>
     $("#sub-" + s).classList.toggle("hidden", s !== name));
   // CSV/refresh tools only make sense on the run-driven panels
-  $(".subtab-tools").style.visibility = name === "glossary" ? "hidden" : "visible";
+  $(".subtab-tools").style.visibility =
+    (name === "glossary" || name === "drivequality") ? "hidden" : "visible";
   if (name === "drivability") renderDrivability();
+  if (name === "drivequality" && typeof renderDriveQuality === "function")
+    renderDriveQuality();
   if (name === "glossary") renderGlossary();
 }
 $$("#resSubtabs .subtab").forEach(b =>

@@ -555,6 +555,37 @@ class Api:
         os.makedirs(root, exist_ok=True)
         os.startfile(root)
 
+    # ---- Drive Quality (Results sub-tab) -----------------------------------
+
+    def _dq_report(self, path):
+        import drive_quality
+        try:
+            return drive_quality.dq_from_mf4(path)
+        except Exception as exc:
+            return {"file": os.path.basename(path), "error": str(exc)[:160]}
+
+    def dq_score_file(self):
+        """Score one MF4 against the EV Challenge Drive Quality targets."""
+        import webview
+        sel = webview.windows[0].create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=True,
+            file_types=(file_filter("MF4 files (*.mf4)"),))
+        if not sel:
+            return {"cancelled": True}
+        return {"reports": [self._dq_report(p) for p in sel]}
+
+    def dq_score_folder(self):
+        """Score every MF4 in a folder (e.g. an AVL deliverable set)."""
+        import webview
+        sel = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+        if not sel:
+            return {"cancelled": True}
+        import glob as _glob
+        files = sorted(_glob.glob(os.path.join(sel[0], "*.mf4")))
+        if not files:
+            return {"reports": [], "error": "no MF4 files in that folder"}
+        return {"reports": [self._dq_report(p) for p in files]}
+
     def open_viewer_app(self):
         subprocess.Popen(self_command("--viewer"))
 
