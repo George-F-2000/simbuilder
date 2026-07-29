@@ -96,7 +96,14 @@ each as of 2026-07-18 (all four now ADDRESSED — vehicle SN-2499411196):
    VXLOW→1, inflation 262 kPa, RIM_WIDTH artifact fixed. Set as the
    Vehicle Builder tire override (⚡). ✅ CAVEAT: the Pacejka SHAPE
    coefficients are still the donor tyre's — disclosed approximation
-   until a measured 265/50R20 EV tyre file exists (ask Altair academic).
+   until a measured 265/50R20 EV tyre file exists (ask Altair academic —
+   ASKED 2026-07-26, awaiting reply). **VENDOR-CONFIRMED METHOD (Altair
+   AE, 2026-07-26)**: all tyre modifications belong in the TIR/TPF file,
+   NOT the MotionView Entity Editor (and after editing you must re-read
+   the tyre file so the editor re-populates). Our pipeline patches the
+   solver deck directly and never touches the Entity Editor, so the
+   stale-cache trap cannot bite us — file-level scaling is the sanctioned
+   route and the one we already use.
 3. **Aero** — replaced with **`LYRIQ_aero.aae`** (in `MBD - Copy For
    Testing`): frontal area 2.6 m², Cd 0.28 (incidence curve scaled
    proportionally). Set as the Vehicle Builder aero override (⚡, new
@@ -228,6 +235,14 @@ Validity gates per run:
   creep floor 250 mm/s (+ relaxation-off USE_MODE 104 for stop-crossing
   cycles); near-standstill DWELL is safe (regen self-limits to ~0 torque).
   UDDS-class cycles with full stops still need the recipe + patience.
+  **VENDOR-CONFIRMED (Altair AE, 2026-07-26)**: "Most tire models despise
+  zero speed events. In the tire property file there is usually a term for
+  scaling forces once tire speed drops below a certain value. This leads to
+  forces approaching zero or asymptotes as speed approaches zero and causing
+  instability... It is strongly recommended to have some speed in your
+  events, even if it is only 0.1 km/h." Our creep floor is therefore
+  SANCTIONED PRACTICE, not a workaround — and we run it 9x more
+  conservatively than the vendor minimum. Quotable in the thesis.
 
 **INTERFACE (documented mappings, physics untouched):**
 - **Pedal axis ~2.4–3× soft vs the real car** (traction_gamma = 2, i.e.
