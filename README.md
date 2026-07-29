@@ -10,7 +10,7 @@ converter are inside the same exe, reachable from the header buttons.
 `dist\SimBuilder.exe` dispatches on its own command line and relaunches
 itself for the tkinter tools (pywebview and tkinter each need their own GUI
 loop - the Chrome multi-process pattern):
-
+r
 ```
 SimBuilder.exe                     builder + pipeline (default)
 SimBuilder.exe --viewer [x.mf4 …]  MF4 viewer
