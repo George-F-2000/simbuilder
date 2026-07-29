@@ -3,7 +3,7 @@
 Every rule in here was paid for with a real failure or a real near-miss on
 this project. **Part I** is the rules. **Part II is the Chronicle — the
 full story of this model, told as it happened**, kept as raw material for
-the thesis methodology chapter. When something teaches you (or Claude)
+the thesis methodology chapter. When something teaches you
 something new, add a story to Part II and, if it generalizes, a rule to
 Part I. Sibling docs: README.md (how the app works), CAMPAIGN.md (the
 plan), ENGINEERING_NOTES.md (the dense session log this distills).

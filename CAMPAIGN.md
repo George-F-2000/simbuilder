@@ -17,7 +17,7 @@ mid-campaign** (the serial number is your witness).
       (validity gate) and note both wall times.
 
 ## Phase 1 — HWFET efficiency sweep (the core result)
-- [ ] Ask Claude for the **RUN EMS SWEEP** button (campaign item 3 —
+- [ ] Add the **RUN EMS SWEEP** button (campaign item 3 —
       same scenario, all strategies back-to-back, one click).
 - [ ] HWFET × 6 strategies: deck_default, loss_optimal, rule, fuzzy,
       even, single_motor. (~1 night with the sweep button.)
@@ -26,7 +26,7 @@ mid-campaign** (the serial number is your witness).
 
 ## Phase 2 — UDDS (city) sweep
 - [ ] One UDDS, deck-default, overnight → true cost of the city cycle.
-- [ ] If too slow: ask Claude for a **UDDS Phase-1 (505 s)** variant —
+- [ ] If too slow: add a **UDDS Phase-1 (505 s)** variant —
       defensible subset, ~⅓ the cost.
 - [ ] UDDS × the strategies that mattered on HWFET (often the extremes:
       default, loss_optimal, even). One per night is fine.
