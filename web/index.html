@@ -47,6 +47,16 @@
         <button id="btnHwfet" class="ghost"
           title="EPA Highway Fuel Economy Test: 765 s, 16–96 km/h, no stops after launch. The efficiency benchmark for highway driving — solves much faster than UDDS.">HWFET — highway, 765 s</button>
       </div>
+      <div id="perfRow" class="hidden">
+        <span class="setup-label" style="flex:0 0 auto">Performance<br>(one WOT pull)</span>
+        <button id="btnPerf" class="ghost"
+          title="One wide-open-throttle pull from rest through 70 mph. Extracts 0–60 mph WITH a 1-foot rollout (how it's officially quoted) and 50–70 mph from the same run. Regen-off; ~15 min.">⏱ 0–60 &amp; 50–70 mph</button>
+        <label style="flex:0 0 auto">pedal %
+          <input type="number" id="perfPct" value="100" min="10" max="100" step="1"
+            style="width:4.5em" title="100% = true max. 87% ≈ the real pack's power limit, which the FMU otherwise ignores.">
+        </label>
+        <span class="hint" id="perfReadout"></span>
+      </div>
     </div>
 
     <!-- Import a REAL drive (logged MF4 from the actual car) as a scenario.
@@ -396,6 +406,8 @@
           <button id="btnVehToPreview" class="ghost" title="Push mass, CdA and tractive force into the scenario preview model">Use in scenario preview</button>
           <button id="btnVehSave" class="ghost">Save vehicle</button>
           <button id="btnVehLoad" class="ghost">Open vehicle</button>
+          <button id="btnVehVigrade" class="ghost"
+            title="Export a VI-grade bundle (VI-CarRealTime / VI-DriveSim): subsystem-structured vehicle XML + the portable .tir and powertrain FMU">Export to VI-grade</button>
           <button id="btnVehReset" class="ghost">Reset</button>
           <input type="file" id="fileVehJson" accept=".json" hidden>
         </div>

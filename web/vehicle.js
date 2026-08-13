@@ -617,6 +617,31 @@ $("#btnVehSave").onclick = () => {
     JSON.stringify(veh, null, 2), "application/json");
 };
 $("#btnVehLoad").onclick = () => $("#fileVehJson").click();
+$("#btnVehVigrade").onclick = async () => {
+  if (!window.pywebview) {
+    alert("Export to VI-grade runs inside the SimBuilder app.");
+    return;
+  }
+  const btn = $("#btnVehVigrade");
+  const label = btn.textContent;
+  btn.textContent = "Exporting…"; btn.disabled = true;
+  try {
+    readVehicleInputs();
+    const res = await pywebview.api.export_vigrade(vehiclePayload());
+    if (res && res.ok) {
+      alert("VI-grade bundle exported (" + res.mass_kg + " kg, powertrain FMU " +
+            "FMI " + res.fmu_fmi + ").\n\n" + res.xml + "\nassets: " +
+            (res.assets || []).join(", ") + "\n\nFolder opened. See the README " +
+            "for the per-subsystem import path.");
+    } else {
+      alert("Export failed: " + ((res && res.error) || "unknown error"));
+    }
+  } catch (err) {
+    alert("Export failed: " + err);
+  } finally {
+    btn.textContent = label; btn.disabled = false;
+  }
+};
 $("#fileVehJson").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;

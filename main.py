@@ -423,6 +423,89 @@ class Api:
                          daemon=True).start()
         return {"ok": True}
 
+    def export_vigrade(self, vehicle=None):
+        """Export the current model to a VI-grade (VI-CarRealTime / VI-DriveSim)
+        bundle: a subsystem-structured vehicle XML + the portable .tir and
+        powertrain FMU. Opens the output folder when done."""
+        import glob as _glob
+        import vigrade_export
+        deck = self.settings.get("deck")
+        if not deck or not os.path.isfile(deck):
+            return {"ok": False, "error": "no master deck set in settings"}
+        veh = vehicle or {}
+        tir = veh.get("tire_path")
+        aae = veh.get("aero_path")
+        # newest injected powertrain FMU carries the real front-unit/rear-unit maps + EMS
+        roots = [self.settings.get("runs_dir"),
+                 os.path.join(os.environ.get("TEMP", ""), "demoev_runs")]
+        fmus = []
+        for r in roots:
+            if r and os.path.isdir(r):
+                fmus += _glob.glob(os.path.join(r, "**", "Motor_PMSM_dual.fmu"),
+                                   recursive=True)
+        fmu = max(fmus, key=os.path.getmtime) if fmus else None
+        out_root = os.path.join(os.path.dirname(deck), "..", "VIgrade Export")
+        try:
+            out_root = self.settings.get("runs_dir") or out_root
+            out = os.path.join(os.path.dirname(out_root), "VIgrade Export",
+                               "demoEV_" + time.strftime("%Y%m%d_%H%M%S"))
+            man = vigrade_export.export_bundle(deck, out, tir, aae, fmu,
+                                               name="demoEV_0000000000",
+                                               spec=veh.get("spec") or veh)
+            try:
+                os.startfile(out)
+            except Exception:
+                pass
+            pw = man["params"]["powertrain"]["fmu"]
+            return {"ok": True, "dir": out,
+                    "xml": os.path.basename(man["xml"]),
+                    "assets": man["assets"],
+                    "mass_kg": man["params"]["body"]["total_mass_kg"],
+                    "fmu_fmi": pw.get("fmi_version")}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)[:200]}
+
+    def run_performance(self, pct=100, vehicle=None):
+        """Run the performance event: one WOT pull yielding 0-60 (1-foot
+        rollout) and 50-70 mph. Metrics are computed from the MF4 and pushed
+        to the page when the run finishes."""
+        if self.running:
+            return {"ok": False, "error": "A run is already in progress."}
+        import perf_event
+        try:
+            adf = perf_event.build_perf_adf("Performance_%d" % int(pct),
+                                            int(pct))
+        except Exception as exc:
+            return {"ok": False, "error": "perf generation failed: " + str(exc)}
+        self.running = True
+        self.stop_requested = False
+        if vehicle and vehicle.get("pack_voltage"):
+            self.set_voltage(vehicle["pack_voltage"])
+        threading.Thread(target=self._worker,
+                         args=("Performance_%d" % int(pct), adf, vehicle),
+                         kwargs={"on_mf4": self._perf_metrics},
+                         daemon=True).start()
+        return {"ok": True}
+
+    def _perf_metrics(self, mf4_path):
+        """Compute + push performance numbers from a finished pull's MF4."""
+        try:
+            import numpy as np
+            from asammdf import MDF
+            import perf_event
+            m = MDF(mf4_path)
+            t = m.get("VehicleSpeed").timestamps
+            v = np.asarray(m.get("VehicleSpeed").samples[:len(t)], float)
+            try:
+                pb = np.asarray(m.get("BattPower").samples[:len(t)], float)
+            except Exception:
+                pb = None
+            r = perf_event.extract_perf(t, v, pb)
+            self._js("msPipe.perfResult({})".format(json.dumps(r)))
+        except Exception as exc:
+            self._js("msPipe.perfResult({})".format(
+                json.dumps({"error": str(exc)[:160]})))
+
     def run_batch(self, runs, vehicle=None):
         """Run several scenarios back-to-back (the RUN AVL CYCLE button):
         each gets its own run folder + MF4; no viewer per run; the runs
@@ -508,9 +591,11 @@ class Api:
         return {"ok": True}
 
     def _worker(self, scenario_name, adf_text, vehicle=None, aux_files=None,
-                also_view=None):
+                also_view=None, on_mf4=None):
         # also_view: extra MF4 opened alongside the result (the imported real
         # drive) so the sim overlays directly on the measurement it mimics
+        # on_mf4: optional callback(mf4_path) run after a successful solve
+        #         (the performance event uses it to compute + push metrics)
         extra = [also_view] if also_view and os.path.isfile(also_view) else []
         self.dir_holder["dir"] = None
         self._start_live()
@@ -526,6 +611,11 @@ class Api:
             self.last_run_dir, self.last_mf4 = run_dir, mf4
             self._js("msPipe.done(true, {}, {})".format(
                 json.dumps(mf4), json.dumps(run_dir)))
+            if on_mf4:
+                try:
+                    on_mf4(mf4)
+                except Exception:
+                    pass
             self._load_final_channels(run_dir)   # fill the Live tab's channels
         except Exception as exc:
             if self.stop_requested:
@@ -614,18 +704,61 @@ def run_pipeline_window():
 #  Dispatcher
 # ----------------------------------------------------------------------------
 
+def _launch_tool(mod_name):
+    """Import and run a tkinter tool (viewer / plt_gui) with the two things
+    that make it portable to OTHER machines:
+      * MPLCONFIGDIR -> a writable temp dir, so matplotlib's font-cache build
+        never fails on a locked-down machine (Windows home dir not writable).
+      * a crash log + error dialog, so a failure shows the actual traceback
+        instead of a bare Windows 'fault exception' box - the file can be
+        sent back to diagnose a machine we can't touch.
+    """
+    import tempfile
+    import traceback
+    cfg = os.path.join(tempfile.gettempdir(), "simbuilder_mpl")
+    try:
+        os.makedirs(cfg, exist_ok=True)
+        os.environ.setdefault("MPLCONFIGDIR", cfg)
+    except Exception:
+        pass
+    try:
+        mod = __import__(mod_name)
+        mod.main()
+    except Exception:
+        tb = traceback.format_exc()
+        log = os.path.join(tempfile.gettempdir(),
+                           "simbuilder_%s_crash.log" % mod_name)
+        try:
+            with open(log, "w", encoding="utf-8") as fh:
+                fh.write(tb)
+        except Exception:
+            log = "(could not write log)"
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+            last = tb.strip().splitlines()[-1] if tb.strip() else "unknown error"
+            r = tk.Tk()
+            r.withdraw()
+            messagebox.showerror(
+                "SimBuilder — %s could not open" % mod_name,
+                "%s\n\nFull details saved to:\n%s\n\n(send this file to diagnose)"
+                % (last, log))
+            r.destroy()
+        except Exception:
+            pass
+        raise
+
+
 def main():
     argv = sys.argv[1:]
     if argv and argv[0] == "--viewer":
         # hand the remaining args (mf4 paths) to the viewer, which reads
         # them from sys.argv itself
         sys.argv = [sys.argv[0]] + argv[1:]
-        import viewer
-        viewer.main()
+        _launch_tool("viewer")
     elif argv and argv[0] == "--plt-converter":
         sys.argv = [sys.argv[0]] + argv[1:]
-        import plt_gui
-        plt_gui.main()
+        _launch_tool("plt_gui")
     else:
         run_pipeline_window()
 

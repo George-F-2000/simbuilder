@@ -743,6 +743,20 @@ window.msPipe = {
     $("#btnRunFolder").classList.remove("hidden");
     if (ok) $("#btnRunViewer").classList.remove("hidden");
   },
+  perfResult(r) {
+    const el = $("#perfReadout");
+    if (!el) return;
+    if (r.error) { el.textContent = "metrics failed: " + r.error; return; }
+    const parts = [];
+    if (r.zero_to_60_s != null)
+      parts.push("0–60 mph: " + r.zero_to_60_s + " s (1-ft rollout" +
+                 (r.zero_to_60_no_rollout_s != null
+                    ? "; " + r.zero_to_60_no_rollout_s + " s raw" : "") + ")");
+    if (r.fifty_to_70_s != null) parts.push("50–70 mph: " + r.fifty_to_70_s + " s");
+    if (r.peak_accel_g != null) parts.push("peak " + r.peak_accel_g + " g");
+    if (r.peak_batt_kw != null) parts.push("peak " + r.peak_batt_kw + " kW");
+    el.innerHTML = "<b>" + parts.join(" · ") + "</b>";
+  },
 };
 
 /* every run entry point confirms the solver time step first - George's
@@ -965,6 +979,23 @@ $("#btnHwfet").onclick = runDriveCycle("HWFET",
   "EPA highway cycle: 765 s, no stops after the initial launch — " +
   "solves far faster than UDDS.");
 
+$("#btnPerf").onclick = async () => {
+  const pct = Math.max(10, Math.min(100, Number($("#perfPct").value) || 100));
+  if (!confirm(`Run the performance event at ${pct}% pedal?\n\n` +
+               `One wide-open pull from rest through 70 mph. Extracts 0–60 ` +
+               `mph (with a 1-foot rollout) and 50–70 mph from the same run.\n\n` +
+               `Regen-off, h_max = 0.01 s (10 ms). Results land in the runs ` +
+               `folder; the numbers appear here when it finishes.`)) return;
+  $("#perfReadout").textContent = "";
+  openRunPanel(`starting performance pull (${pct}%)…`);
+  const res = await pywebview.api.run_performance(pct,
+    window.vehiclePayload ? vehiclePayload() : null);
+  if (!res.ok) {
+    msPipe.log("ERROR: " + res.error);
+    msPipe.done(false, null, null);
+  }
+};
+
 function applyState(state) {
   $("#runVoltage").value = state.settings.pack_voltage;
 
@@ -998,6 +1029,7 @@ window.addEventListener("pywebviewready", async () => {
   $("#btnRun").classList.remove("hidden");
   $("#btnRunCycle").classList.remove("hidden");
   $("#driveCycleRow").classList.remove("hidden");
+  $("#perfRow").classList.remove("hidden");
   $("#importCard").classList.remove("hidden");
   $("#btnOpenViewer").classList.remove("hidden");
   $("#btnOpenPlt").classList.remove("hidden");
