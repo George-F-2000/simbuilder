@@ -2,3 +2,4 @@ ppo_wc*.zip
 george_rl_wc*.mat
 george_ems_ppo.zip
 sweep.log
+figs/
