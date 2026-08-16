@@ -51,7 +51,7 @@ def fig1():
         ax.scatter(t, v, s=3, c=color, alpha=0.25, label=lab)
     ax.set_xlabel("combined torque demand [Nm]  (front 210 + rear 380 = 590 max)")
     ax.set_ylabel("vehicle speed [km/h]")
-    ax.set_title("GM's stock split map: when the rear axle earns its keep\n"
+    ax.set_title("The demo EV map: when the rear axle earns its keep\n"
                  "(blue = front does it all, red = rear takes over)")
     ax.legend(loc="upper right")
     stats = (f"map avg rear share {r.mean():.2f} | "
