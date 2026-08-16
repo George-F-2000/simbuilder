@@ -413,3 +413,24 @@ def apply_ems(ems, run_dir, motors, log=print):
     log("  EMS: '{}' split map written (r_ch {:.2f}..{:.2f}, mean {:.2f})"
         .format(strategy, r.min(), r.max(), r.mean()))
     return strategy
+
+
+def strat_custom_mat(w, T, mat_path=None, **k):
+    """'custom_mat': use an externally supplied r_ch map (e.g. the RL knee
+    EMS from rl_gym). Interpolated onto the deck axes; identical axes pass
+    through unchanged. Default path = the committed knee map."""
+    from scipy.interpolate import RegularGridInterpolator
+    if not mat_path:
+        mat_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "rl_gym", "knee_george_ems.mat")
+    m = loadmat(mat_path)
+    ws, Ts = m["w"].ravel(), m["T_dem"].ravel()
+    it = RegularGridInterpolator((ws, Ts), m["r_ch"],
+                                 bounds_error=False, fill_value=None)
+    W, TT = np.meshgrid(np.clip(w, ws[0], ws[-1]),
+                        np.clip(T, Ts[0], Ts[-1]), indexing="ij")
+    return it(np.stack([W.ravel(), TT.ravel()], axis=-1)).reshape(W.shape)
+
+
+_STRAT_FUNCS["custom_mat"] = strat_custom_mat
+STRATEGIES.append("custom_mat")
