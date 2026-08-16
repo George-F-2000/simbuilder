@@ -35,13 +35,15 @@ def main():
     ]
     for cyc_name, cyc_file in CYCLES:
         print(f"\n=== {cyc_name} ===")
-        print(f"{'strategy':<30}{'Wh/km':>8}{'SOC drop %':>12}{'track RMSE km/h':>17}{'sim s':>7}")
+        print(f"{'strategy':<30}{'Wh/km':>8}{'jerkRMS':>9}{'engage/min':>12}"
+              f"{'discomfort':>12}{'trackRMSE':>11}")
         for name, factory in strategies:
             t0 = time.time()
             s = evaluate(factory, cyc_file)
             rows[f"{cyc_name}/{name}"] = s
-            print(f"{name:<30}{s['wh_per_km']:>8.1f}{s['soc_drop_pct']:>12.2f}"
-                  f"{s['track_rmse_kmh']:>17.2f}{time.time()-t0:>7.1f}")
+            print(f"{name:<30}{s['wh_per_km']:>8.1f}{s['jerk_rms']:>9.3f}"
+                  f"{s['engage_per_min']:>12.2f}{s['discomfort']:>12.2f}"
+                  f"{s['track_rmse_kmh']:>11.2f}")
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "baselines.json")
     with open(out, "w") as f:
         json.dump(rows, f, indent=2)

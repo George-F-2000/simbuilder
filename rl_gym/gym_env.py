@@ -108,12 +108,21 @@ class DemoSplitEnv:
     """step(action r in [0,1]) -> obs, reward, done, info.
     obs = [v/55.55, T_dem/591, SOC]. Reward = -energy - jerk penalty."""
 
-    def __init__(self, cycle="hwycol.txt", w_energy=1.0, w_smooth=0.05,
+    # comfort sub-weights (documented in Bible 28.8; ISO-2631-flavoured jerk
+    # emphasis). discomfort per step =
+    #   C_JERK * jerk^2 * dt  +  C_ENGAGE per rear-axle wake/sleep event
+    #   + C_RATE * (|dTf| + |dTr|) / T_DEM_MAX
+    C_JERK = 0.02        # (m/s^3)^-2 s^-1 — 1 m/s^3 sustained ~ energy-visible
+    C_ENGAGE = 0.05      # per event — the AVL "motor activation" analogue
+    C_RATE = 0.02        # torque slew harshness
+    ENGAGE_THR = 5.0     # Nm rear-torque hysteresis band for an "engagement"
+
+    def __init__(self, cycle="hwycol.txt", w_energy=1.0, w_comfort=1.0,
                  soc0=SOC0, pack_wh=PACK_WH):
         self.front = Motor(os.path.join(STOCK, "one_strlineacc_0_frnt_motor_data.mat"))
         self.rear = Motor(os.path.join(STOCK, "one_strlineacc_0_rear_motor_data.mat"))
         self.t_grid, self.v_tgt = load_cycle(cycle)
-        self.w_energy, self.w_smooth = w_energy, w_smooth
+        self.w_energy, self.w_comfort = w_energy, w_comfort
         self.soc0, self.pack_wh = soc0, pack_wh
         self.reset()
 
@@ -122,8 +131,11 @@ class DemoSplitEnv:
         self.v = float(self.v_tgt[0])
         self.soc = self.soc0
         self.dist = 0.0; self.e_batt_wh = 0.0
-        self.prev_tf = 0.0
+        self.prev_tf = 0.0; self.prev_tr = 0.0; self.prev_a = 0.0
+        self.rear_awake = False
         self.track_err2 = 0.0
+        self.jerk2_sum = 0.0; self.engage_events = 0
+        self.discomfort = 0.0
         return self._obs(self._demand())
 
     def _road_load(self, v):
@@ -169,21 +181,38 @@ class DemoSplitEnv:
         self.e_batt_wh += e_wh
         self.soc = float(np.clip(self.soc - e_wh/self.pack_wh, 0.0, 1.0))
 
-        reward = (-self.w_energy*e_wh/1.0
-                  - self.w_smooth*abs(tf - self.prev_tf)/T_DEM_MAX)
-        self.prev_tf = tf
+        # ---- comfort accounting (Bible 28.8): jerk, axle engagement, slew ----
+        jerk = (a - self.prev_a)/DT
+        self.prev_a = a
+        self.jerk2_sum += jerk*jerk*DT
+        awake = abs(tr) > self.ENGAGE_THR
+        engaged = awake != self.rear_awake
+        if engaged:
+            self.engage_events += 1
+        self.rear_awake = awake
+        step_discomfort = (self.C_JERK*jerk*jerk*DT
+                           + (self.C_ENGAGE if engaged else 0.0)
+                           + self.C_RATE*(abs(tf - self.prev_tf)
+                                          + abs(tr - self.prev_tr))/T_DEM_MAX)
+        self.discomfort += step_discomfort
+        reward = -self.w_energy*e_wh - self.w_comfort*step_discomfort
+        self.prev_tf, self.prev_tr = tf, tr
         self.k += 1
         done = self.k >= len(self.t_grid) - 1
         err = self.v - self.v_tgt[self.k]
         self.track_err2 += err*err
         info = {"tf": tf, "tr": tr, "t_dem": t_dem, "p_batt": p_batt,
-                "v": self.v, "wr": wr}
+                "v": self.v, "wr": wr, "jerk": jerk}
         return self._obs(self._demand()), reward, done, info
 
     def summary(self):
         km = max(self.dist/1000.0, 1e-9)
+        minutes = self.k*DT/60.0
         return {"wh_per_km": self.e_batt_wh/km,
                 "energy_wh": self.e_batt_wh,
                 "dist_km": km,
                 "soc_drop_pct": 100*(self.soc0 - self.soc),
-                "track_rmse_kmh": 3.6*np.sqrt(self.track_err2/max(self.k, 1))}
+                "track_rmse_kmh": 3.6*np.sqrt(self.track_err2/max(self.k, 1)),
+                "jerk_rms": float(np.sqrt(self.jerk2_sum/max(self.k*DT, 1e-9))),
+                "engage_per_min": self.engage_events/max(minutes, 1e-9),
+                "discomfort": self.discomfort}
