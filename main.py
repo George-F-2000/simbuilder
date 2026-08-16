@@ -465,6 +465,34 @@ class Api:
         except Exception as exc:
             return {"ok": False, "error": str(exc)[:200]}
 
+    # ---- Calibration tab ---------------------------------------------------
+
+    def calib_state(self):
+        """Knobs (with tooltip metadata), attempt history, reference status."""
+        import calibration
+        try:
+            return calibration.get_state()
+        except Exception as exc:
+            return {"error": str(exc)[:160], "knobs": {}, "meta": {},
+                    "history": [], "reference": {"ok": False}}
+
+    def calib_run(self, knobs=None):
+        """One calibration attempt: replay the reference window with the
+        given knobs, score vs the real log, append to history. Blocking on
+        purpose (the page disables the button); ~15 min."""
+        if self.running:
+            return {"ok": False, "error": "A run is already in progress."}
+        import calibration
+        self.running = True
+        try:
+            row = calibration.run_calibration(self.settings, knobs or {},
+                                              log=self._log)
+            return {"ok": True, "row": row}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)[:200]}
+        finally:
+            self.running = False
+
     def run_performance(self, pct=100, vehicle=None):
         """Run the performance event: one WOT pull yielding 0-60 (1-foot
         rollout) and 50-70 mph. Metrics are computed from the MF4 and pushed

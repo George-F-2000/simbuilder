@@ -668,7 +668,7 @@ $("#btnVehReset").onclick = () => {
 
 function switchTab(which) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === which));
-  ["scenario", "vehicle", "motor", "results", "live"].forEach(id => {
+  ["scenario", "vehicle", "motor", "results", "live", "calib"].forEach(id => {
     const el = $("#tab-" + id);
     if (el) el.classList.toggle("hidden", id !== which);
   });
@@ -677,6 +677,7 @@ function switchTab(which) {
   if (which === "motor" && typeof mbRefresh === "function") mbRefresh();
   if (which === "results" && typeof resultsOnEnter === "function") resultsOnEnter();
   if (which === "live" && typeof liveOnEnter === "function") liveOnEnter();
+  if (which === "calib" && typeof calibOnEnter === "function") calibOnEnter();
 }
 $$(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.tab));
 switchTab("vehicle");   // Vehicle Builder is the first stop
