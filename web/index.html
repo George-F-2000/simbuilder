@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SimBuilder — Scenario &amp; Vehicle → MotionSolve</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.calib-knobs label.calib-knob{display:block;margin:10px 0;font-weight:600}
+.calib-knob input,.calib-knob select{margin-left:8px;width:110px}
+.knob-hint{display:block;font-weight:400;margin:2px 0 0 2px;max-width:640px}
+.calib-better{color:#1e7e34;font-weight:700}
+.calib-worse{color:#c0392b;font-weight:700}
+</style>
 </head>
 <body>
 <header>
@@ -18,6 +25,7 @@
     <button class="tab" data-tab="scenario">Scenario Builder</button>
     <button class="tab" data-tab="results">Results</button>
     <button class="tab" data-tab="live">Live</button>
+    <button class="tab" data-tab="calib">Calibration</button>
   </nav>
   <div class="header-actions">
     <button id="btnTheme" class="ghost" title="Toggle dark mode">🌙</button>
@@ -468,6 +476,39 @@
 </main>
 
 <!-- ============================= RESULTS TAB ============================= -->
+
+<main id="tab-calib" class="hidden">
+  <section class="res-full">
+    <div class="card">
+      <h2>Calibration <span class="hint">tune the model against the real car
+        &mdash; and KNOW each change helped</span></h2>
+      <p class="hint" id="calibHint"></p>
+      <p class="hint"><b>How this works:</b> the model replays your real
+        driver's pedal from the reference log with YOUR knob settings, then
+        the result is scored against the real recording &mdash; speed and
+        torque RMSE (lower = closer) and correlation (higher = same shape).
+        Each row's green/red arrows compare it to your PREVIOUS attempt, so
+        you always know whether the last change helped. Hover any knob for
+        what it does and which way to turn it. Physics is locked: these are
+        calibration layers only.</p>
+    </div>
+    <div class="card">
+      <h2>Knobs <span class="hint">hover for guidance &mdash; defaults are the
+        validated values</span></h2>
+      <div id="calibKnobs" class="calib-knobs"></div>
+      <div class="run-tools">
+        <button id="btnCalibRun" class="run-ms">&#9654; Run &amp; Score</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Attempt history <span class="hint">green = improved vs previous,
+        red = worse</span></h2>
+      <p class="hint" id="calibBest"></p>
+      <div id="calibHistWrap"><table id="calibHistory"></table></div>
+    </div>
+  </section>
+</main>
+
 <main id="tab-results" class="hidden">
   <section class="res-full">
     <div class="subtabs" id="resSubtabs">
@@ -692,6 +733,7 @@
 <script src="motorbuilder.js"></script>
 <script src="results.js"></script>
 <script src="dq.js"></script>
+<script src="calib.js"></script>
 <script src="live.js"></script>
 </body>
 </html>
