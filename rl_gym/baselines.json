@@ -1,0 +1,58 @@
+{
+  "HWFET/stock r_ch map": {
+    "wh_per_km": 192.01588121189067,
+    "energy_wh": 3170.060319697022,
+    "dist_km": 16.509365265463856,
+    "soc_drop_pct": 33.46769763193653,
+    "track_rmse_kmh": 0.026322781674431587
+  },
+  "HWFET/single_motor (front only)": {
+    "wh_per_km": 191.88688104005834,
+    "energy_wh": 3167.9657039617523,
+    "dist_km": 16.509548160827144,
+    "soc_drop_pct": 33.44558386783953,
+    "track_rmse_kmh": 0.02898671018735397
+  },
+  "HWFET/even 50/50": {
+    "wh_per_km": 209.51225860352875,
+    "energy_wh": 3458.3245018559924,
+    "dist_km": 16.50654966400016,
+    "soc_drop_pct": 36.51102725776986,
+    "track_rmse_kmh": 5.712423710704515e-19
+  },
+  "HWFET/loss-greedy (myopic optimum)": {
+    "wh_per_km": 194.143599397485,
+    "energy_wh": 3203.089296893933,
+    "dist_km": 16.498557288700535,
+    "soc_drop_pct": 33.81639882700526,
+    "track_rmse_kmh": 0.04818266613024033
+  },
+  "UDDS/stock r_ch map": {
+    "wh_per_km": 177.7597116707358,
+    "energy_wh": 2131.553552191852,
+    "dist_km": 11.991207299774018,
+    "soc_drop_pct": 22.503732603372196,
+    "track_rmse_kmh": 0.03388894502471966
+  },
+  "UDDS/single_motor (front only)": {
+    "wh_per_km": 175.72725642620196,
+    "energy_wh": 2107.521733895763,
+    "dist_km": 11.993140829469636,
+    "soc_drop_pct": 22.25001830548291,
+    "track_rmse_kmh": 0.05340156640736785
+  },
+  "UDDS/even 50/50": {
+    "wh_per_km": 186.04936792882745,
+    "energy_wh": 2230.7763232645775,
+    "dist_km": 11.990238655999914,
+    "soc_drop_pct": 23.55127030473019,
+    "track_rmse_kmh": 6.224670239556671e-18
+  },
+  "UDDS/loss-greedy (myopic optimum)": {
+    "wh_per_km": 183.20583334938897,
+    "energy_wh": 2192.921416520153,
+    "dist_km": 11.9697139355714,
+    "soc_drop_pct": 23.151619684539714,
+    "track_rmse_kmh": 0.08242214456372189
+  }
+}
