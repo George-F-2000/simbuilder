@@ -4,55 +4,79 @@
     "energy_wh": 3170.060319697022,
     "dist_km": 16.509365265463856,
     "soc_drop_pct": 33.46769763193653,
-    "track_rmse_kmh": 0.026322781674431587
+    "track_rmse_kmh": 0.026322781674431587,
+    "jerk_rms": 0.4767099496326492,
+    "engage_per_min": 0.3137665054255458,
+    "discomfort": 3.9421318557530456
   },
   "HWFET/single_motor (front only)": {
     "wh_per_km": 191.88688104005834,
     "energy_wh": 3167.9657039617523,
     "dist_km": 16.509548160827144,
     "soc_drop_pct": 33.44558386783953,
-    "track_rmse_kmh": 0.02898671018735397
+    "track_rmse_kmh": 0.02898671018735397,
+    "jerk_rms": 0.48323289624384996,
+    "engage_per_min": 0.0,
+    "discomfort": 3.762142532738279
   },
   "HWFET/even 50/50": {
     "wh_per_km": 209.51225860352875,
     "energy_wh": 3458.3245018559924,
     "dist_km": 16.50654966400016,
     "soc_drop_pct": 36.51102725776986,
-    "track_rmse_kmh": 5.712423710704515e-19
+    "track_rmse_kmh": 5.712423710704515e-19,
+    "jerk_rms": 0.35361477367356015,
+    "engage_per_min": 7.844162635638645,
+    "discomfort": 7.047012471441472
   },
   "HWFET/loss-greedy (myopic optimum)": {
     "wh_per_km": 194.143599397485,
     "energy_wh": 3203.089296893933,
     "dist_km": 16.498557288700535,
     "soc_drop_pct": 33.81639882700526,
-    "track_rmse_kmh": 0.04818266613024033
+    "track_rmse_kmh": 0.04818266613024033,
+    "jerk_rms": 0.38750003253049775,
+    "engage_per_min": 4.86338083409596,
+    "discomfort": 5.5885614496218485
   },
   "UDDS/stock r_ch map": {
     "wh_per_km": 177.7597116707358,
     "energy_wh": 2131.553552191852,
     "dist_km": 11.991207299774018,
     "soc_drop_pct": 22.503732603372196,
-    "track_rmse_kmh": 0.03388894502471966
+    "track_rmse_kmh": 0.03388894502471966,
+    "jerk_rms": 1.024349829853105,
+    "engage_per_min": 4.295419680035065,
+    "discomfort": 34.797979204204466
   },
   "UDDS/single_motor (front only)": {
     "wh_per_km": 175.72725642620196,
     "energy_wh": 2107.521733895763,
     "dist_km": 11.993140829469636,
     "soc_drop_pct": 22.25001830548291,
-    "track_rmse_kmh": 0.05340156640736785
+    "track_rmse_kmh": 0.05340156640736785,
+    "jerk_rms": 1.1882271742690433,
+    "engage_per_min": 0.0,
+    "discomfort": 39.469787135710504
   },
   "UDDS/even 50/50": {
     "wh_per_km": 186.04936792882745,
     "energy_wh": 2230.7763232645775,
     "dist_km": 11.990238655999914,
     "soc_drop_pct": 23.55127030473019,
-    "track_rmse_kmh": 6.224670239556671e-18
+    "track_rmse_kmh": 6.224670239556671e-18,
+    "jerk_rms": 0.8885109867420456,
+    "engage_per_min": 9.555117247424938,
+    "discomfort": 33.10279163758193
   },
   "UDDS/loss-greedy (myopic optimum)": {
     "wh_per_km": 183.20583334938897,
     "energy_wh": 2192.921416520153,
     "dist_km": 11.9697139355714,
     "soc_drop_pct": 23.151619684539714,
-    "track_rmse_kmh": 0.08242214456372189
+    "track_rmse_kmh": 0.08242214456372189,
+    "jerk_rms": 1.018147605448428,
+    "engage_per_min": 8.59083936007013,
+    "discomfort": 39.08357277491349
   }
 }

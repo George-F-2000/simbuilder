@@ -26,8 +26,8 @@ except ImportError as e:
 class GymWrapper(gym.Env):
     """Adapts DemoSplitEnv to the Gymnasium API SB3 expects."""
 
-    def __init__(self, cycle, w_smooth):
-        self.env = DemoSplitEnv(cycle=cycle, w_smooth=w_smooth)
+    def __init__(self, cycle, w_comfort):
+        self.env = DemoSplitEnv(cycle=cycle, w_comfort=w_comfort)
         self.observation_space = gym.spaces.Box(low=np.array([0, -1.2, 0]),
                                                 high=np.array([1.2, 1.2, 1]),
                                                 dtype=np.float64)
@@ -46,10 +46,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=300_000)
     ap.add_argument("--cycle", default="hwycol.txt")
-    ap.add_argument("--w_smooth", type=float, default=0.05)
+    ap.add_argument("--w_comfort", type=float, default=1.0,
+                    help="comfort weight vs energy; sweep this for the "
+                         "comfort-range Pareto frontier (Bible 28.8)")
     args = ap.parse_args()
 
-    env = GymWrapper(args.cycle, args.w_smooth)
+    env = GymWrapper(args.cycle, args.w_comfort)
     model = PPO("MlpPolicy", env, verbose=1,
                 policy_kwargs=dict(net_arch=[64, 64]))
     model.learn(total_timesteps=args.steps)
