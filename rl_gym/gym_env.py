@@ -133,6 +133,9 @@ class DemoSplitEnv:
         self.dist = 0.0; self.e_batt_wh = 0.0
         self.prev_tf = 0.0; self.prev_tr = 0.0; self.prev_a = 0.0
         self.rear_awake = False
+        self.g_mix = 0.5*(G_F + G_R)   # driver adapts to realized mix (28.9a)
+        self.r_applied = 0.0           # slew-limited split: engagements ramp,
+                                       # not clunk (28.9c); 2.0/s max
         self.track_err2 = 0.0
         self.jerk2_sum = 0.0; self.engage_events = 0
         self.discomfort = 0.0
@@ -146,15 +149,16 @@ class DemoSplitEnv:
         vt = self.v_tgt[min(self.k + 1, len(self.v_tgt) - 1)]
         a_des = np.clip((vt - self.v)/DT, -5.0, 5.0)
         f = MASS*a_des + self._road_load(self.v)
-        g_mix = 0.5*(G_F + G_R)          # driver guess; feedback corrects
-        return float(np.clip(f*R_WHEEL/(g_mix*ETA_DRIVELINE),
+        return float(np.clip(f*R_WHEEL/(self.g_mix*ETA_DRIVELINE),
                              -T_DEM_MAX, T_DEM_MAX))
 
     def _obs(self, t_dem):
         return np.array([self.v/55.55, t_dem/T_DEM_MAX, self.soc], np.float64)
 
     def step(self, r):
-        r = float(np.clip(r, 0.0, 1.0))
+        r_cmd = float(np.clip(r, 0.0, 1.0))
+        self.r_applied += float(np.clip(r_cmd - self.r_applied, -2.0*DT, 2.0*DT))
+        r = self.r_applied
         t_dem = self._demand()
         wf = np.clip(self.v/R_WHEEL*G_F, 0, W_MAX)
         wr = np.clip(self.v/R_WHEEL*G_R, 0, W_MAX)
@@ -164,6 +168,8 @@ class DemoSplitEnv:
         else:
             tf = max(tf, -self.front.max_trq(wf)); tr = max(tr, -self.rear.max_trq(wr))
             # regen shortfall vs demand -> friction brakes (no energy back)
+        if abs(t_dem) > 20.0:      # driver learns the real demand->force mix
+            self.g_mix = float(np.clip((tf*G_F + tr*G_R)/t_dem, G_R, G_F))
         f_wheel = (tf*G_F + tr*G_R)*ETA_DRIVELINE/R_WHEEL
         if t_dem < 0:   # friction brakes make up any deficit so the cycle holds
             f_need = MASS*np.clip((self.v_tgt[min(self.k+1, len(self.v_tgt)-1)]
