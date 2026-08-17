@@ -118,7 +118,11 @@ class DemoSplitEnv:
     ENGAGE_THR = 5.0     # Nm rear-torque hysteresis band for an "engagement"
 
     def __init__(self, cycle="hwycol.txt", w_energy=1.0, w_comfort=1.0,
-                 soc0=SOC0, pack_wh=PACK_WH):
+                 soc0=SOC0, pack_wh=PACK_WH, obs_jerk=False):
+        # obs_jerk=True appends normalized jerk to the observation - the
+        # "jerk vision" upgrade (Bible Ch.29): the policy SEES harshness,
+        # not just gets billed for it. Default False keeps v1 behavior.
+        self.obs_jerk = obs_jerk
         self.front = Motor(os.path.join(STOCK, "one_strlineacc_0_frnt_motor_data.mat"))
         self.rear = Motor(os.path.join(STOCK, "one_strlineacc_0_rear_motor_data.mat"))
         self.t_grid, self.v_tgt = load_cycle(cycle)
@@ -153,7 +157,11 @@ class DemoSplitEnv:
                              -T_DEM_MAX, T_DEM_MAX))
 
     def _obs(self, t_dem):
-        return np.array([self.v/55.55, t_dem/T_DEM_MAX, self.soc], np.float64)
+        base = [self.v/55.55, t_dem/T_DEM_MAX, self.soc]
+        if self.obs_jerk:
+            jerk = (self.prev_a - getattr(self, "_a2", self.prev_a))/DT
+            base.append(np.clip(jerk/10.0, -1.5, 1.5))
+        return np.array(base, np.float64)
 
     def step(self, r):
         r_cmd = float(np.clip(r, 0.0, 1.0))
@@ -189,6 +197,7 @@ class DemoSplitEnv:
 
         # ---- comfort accounting (Bible 28.8): jerk, axle engagement, slew ----
         jerk = (a - self.prev_a)/DT
+        self._a2 = self.prev_a
         self.prev_a = a
         self.jerk2_sum += jerk*jerk*DT
         awake = abs(tr) > self.ENGAGE_THR
