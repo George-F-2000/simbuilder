@@ -12,7 +12,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/assets/mf4viewer.ico', '.'), ('../CSV to MDF Converter/plt-to-mf4-app/assets/plttomf4.ico', '.'), ('web', 'web'), ('cycles', 'cycles'), ('dq_targets.json', '.')]
 binaries = []
-hiddenimports = ['viewer', 'plt_gui', 'ems_builder', 'motor_gen', 'fmu_inject', 'drive_cycles', 'drive_import', 'results', 'live_tail', 'drive_quality', 'pedal_map', 'perf_event', 'vigrade_export', 'calibration']
+hiddenimports = ['viewer', 'plt_gui', 'ems_builder', 'motor_gen', 'fmu_inject', 'drive_cycles', 'drive_import', 'results', 'live_tail', 'drive_quality', 'pedal_map', 'perf_event', 'vigrade_export', 'calibration', 'rl_gym_bridge']
 tmp_ret = collect_all('tkinterdnd2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 for _pkg in ('matplotlib', 'asammdf'):

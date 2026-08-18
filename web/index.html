@@ -26,6 +26,7 @@
     <button class="tab" data-tab="results">Results</button>
     <button class="tab" data-tab="live">Live</button>
     <button class="tab" data-tab="calib">Calibration</button>
+    <button class="tab" data-tab="gym">RL Gym</button>
   </nav>
   <div class="header-actions">
     <button id="btnTheme" class="ghost" title="Toggle dark mode">🌙</button>
@@ -509,6 +510,59 @@
   </section>
 </main>
 
+<main id="tab-gym" class="hidden">
+  <section class="res-full">
+    <div class="card">
+      <h2>RL Gym <span class="hint">train your own EMS brain &mdash; three
+        steps, no terminal</span></h2>
+      <p class="hint" id="gymHint"></p>
+      <p class="hint"><b>What happens when you press Train:</b> a student
+        (a small neural network) drives the workout ~90 times in a fast
+        physics copy of YOUR demo EV (real motor maps, the measured factory
+        pedal law). After every lap batch it is nudged toward choices that
+        used less battery and rode smoother &mdash; smoothness defined by
+        YOUR knobs below. When it graduates, it is scored on the same
+        workout as the stock demo EV map, and lands in the table with green
+        where it beat stock. Training runs in the background &mdash; you
+        can switch tabs and come back.</p>
+    </div>
+    <div class="card">
+      <h2>Step 1 &middot; What does comfort mean to you?
+        <span class="hint">hover any knob &mdash; defaults = the Bible values</span></h2>
+      <div id="gymKnobs"></div>
+    </div>
+    <div class="card">
+      <h2>Step 2 &middot; Pick the workout</h2>
+      <div id="gymWorkouts"></div>
+      <label class="calib-knob">Effort
+        <select id="gymEffort">
+          <option value="50000">Quick look (~10 min, rough brains)</option>
+          <option value="200000" selected>Standard (~35 min, Bible-grade)</option>
+        </select>
+        <span class="hint knob-hint">How long each student practices.
+          Standard = the 200k steps used for every result in the Bible.</span>
+      </label>
+    </div>
+    <div class="card">
+      <h2>Step 3 &middot; Go</h2>
+      <button id="btnGymTrain" class="primary">Train (4 students: comfort off + on, 2 seeds each)</button>
+      <button id="btnGymScore">Score everything at equal footing</button>
+      <button id="btnGymStop" style="display:none">Stop session</button>
+      <div id="gymCoach" style="display:none">
+        <p class="hint"><b>Coach feed (live):</b></p>
+        <pre id="gymLog" class="hint" style="white-space:pre-wrap"></pre>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Graduates <span class="hint">green = beat the stock map on the same
+        workout</span></h2>
+      <div id="gymBest" class="hint"></div>
+      <table id="gymHistory"></table>
+    </div>
+  </section>
+</main>
+
+
 <main id="tab-results" class="hidden">
   <section class="res-full">
     <div class="subtabs" id="resSubtabs">
@@ -734,6 +788,7 @@
 <script src="results.js"></script>
 <script src="dq.js"></script>
 <script src="calib.js"></script>
+<script src="gym.js"></script>
 <script src="live.js"></script>
 </body>
 </html>

@@ -493,6 +493,32 @@ class Api:
         finally:
             self.running = False
 
+
+    def gym_state(self):
+        """RL Gym tab: knobs, workouts, graduate history, running flag."""
+        try:
+            import rl_gym_bridge
+            return rl_gym_bridge.state()
+        except Exception as exc:
+            return {"gym_ok": False, "error": str(exc)[:160], "knobs": {},
+                    "workouts": {}, "history": [], "running": False}
+
+    def gym_train(self, cfg=None):
+        import rl_gym_bridge
+        return rl_gym_bridge.train(cfg or {})
+
+    def gym_rescore(self):
+        import rl_gym_bridge
+        return rl_gym_bridge.rescore()
+
+    def gym_tail(self):
+        import rl_gym_bridge
+        return rl_gym_bridge.tail()
+
+    def gym_stop(self):
+        import rl_gym_bridge
+        return rl_gym_bridge.stop()
+
     def run_performance(self, pct=100, vehicle=None):
         """Run the performance event: one WOT pull yielding 0-60 (1-foot
         rollout) and 50-70 mph. Metrics are computed from the MF4 and pushed
