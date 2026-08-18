@@ -49,9 +49,9 @@ def fig1():
                             ("hwycol.txt", "lime", "HWFET (highway) demand")):
         v, t = cycle_points(cyc)
         ax.scatter(t, v, s=3, c=color, alpha=0.25, label=lab)
-    ax.set_xlabel("combined torque demand [Nm]  (front 210 + rear 380 = 590 max)")
+    ax.set_xlabel("combined torque demand [Nm]")
     ax.set_ylabel("vehicle speed [km/h]")
-    ax.set_title("The demo EV map: when the rear axle earns its keep\n"
+    ax.set_title("The stock split map: when the rear axle earns its keep\n"
                  "(blue = front does it all, red = rear takes over)")
     ax.legend(loc="upper right")
     stats = (f"map avg rear share {r.mean():.2f} | "
@@ -67,9 +67,9 @@ def fig2():
     fig, axes = plt.subplots(1, 2, figsize=(12, 5.2), sharey=False)
     for ax, mat, name in (
             (axes[0], "one_strlineacc_0_frnt_motor_data.mat",
-             "FRONT — front-unit induction, 18.0:1"),
+             "FRONT unit"),
             (axes[1], "one_strlineacc_0_rear_motor_data.mat",
-             "REAR — rear-unit, [RATIO]:1")):
+             "REAR unit")):
         d = loadmat(os.path.join(STOCK, mat))
         s, t = d["m_map_eff_spd"].ravel(), d["m_map_eff_trq"].ravel()
         pc = ax.pcolormesh(s*9.549/1000, t, d["m_eff_map"].T*100,

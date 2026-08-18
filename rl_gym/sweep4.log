@@ -1,0 +1,17 @@
+
+### training w_comfort = 0.0
+   -> 585.5 Wh/km | discomfort 49.22 | jerkRMS 3.305 | engage/min 3.80
+
+### training w_comfort = 0.3
+   -> 634.3 Wh/km | discomfort 46.82 | jerkRMS 3.230 | engage/min 2.72
+
+### training w_comfort = 1.0
+   -> 587.2 Wh/km | discomfort 47.72 | jerkRMS 3.253 | engage/min 3.80
+
+### training w_comfort = 3.0
+   -> 691.4 Wh/km | discomfort 52.78 | jerkRMS 3.422 | engage/min 3.80
+
+### training w_comfort = 10.0
+   -> 659.6 Wh/km | discomfort 46.88 | jerkRMS 3.250 | engage/min 0.00
+
+frontier saved -> C:\Users\George\OneDrive\Desktop\PhD Thesis\pipeline-app\rl_gym\pareto_frontier.json  (plot Wh/km vs discomfort; pick the knee)

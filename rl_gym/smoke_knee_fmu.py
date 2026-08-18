@@ -13,7 +13,7 @@ from fmpy import simulate_fmu
 HERE = os.path.dirname(os.path.abspath(__file__))
 FMU = os.path.join(os.path.dirname(os.path.dirname(HERE)), "Simulink EMS",
                    "GeorgeEMS_Knee.fmu")
-R, GF, GR = [RADIUS], 18.0, [RATIO]
+from gym_env import R_WHEEL as R, G_F as GF, G_R as GR
 
 t = np.arange(0, 25, 0.01)
 throttle = np.where(t < 2, 0.0, 60.0)

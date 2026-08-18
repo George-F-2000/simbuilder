@@ -55,7 +55,7 @@ per-run overrides, with two honestly-labelled kinds of fields:
     difference and its inertia scales proportionally.
   - **Tire property file** (every .tir reference in the deck re-pointed)
     and **Aero property file** (every .aae reference re-pointed — the
-    demo EV deck DOES have an aero force element, contrary to the
+    demo deck DOES have an aero force element, contrary to the
     doublelane), per-file **.mat overrides** (win over generated files),
     and **pack voltage** (EM current estimate).
 - **📋 spec sheet** - suspension types, wheelbase/track, Cd/frontal area

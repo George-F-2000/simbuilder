@@ -48,17 +48,15 @@ STRATEGIES = ["deck_default", "traction", "ratio_even", "loss_optimal",
 #  GEAR-RATIO AWARENESS  (the 2026-07-18 fix)
 #
 #  r_ch splits the combined MOTOR-torque demand. This vehicle's axles have
-#  very different reductions (front front-unit 18:1, rear rear-unit [RATIO]:1), so equal
-#  motor torque puts 18/[RATIO] = 1.88x more torque on the FRONT wheels. The
-#  deck's own default map does exactly that: measured front 178.3 Nm x 18 =
-#  3204 Nm at the wheels vs rear 159.3 x [RATIO] = 1527 Nm. Under a hard launch
+#  potentially different per-axle reductions, so equal MOTOR torque can
+#  mean unequal WHEEL torque. Under a hard launch
 #  the front axle (already unloaded by rearward weight transfer) breaks
 #  traction and spins - observed at +1972% slip while the car crawled.
 #
 #  Everything below therefore reasons in WHEEL torque and converts back.
 # ----------------------------------------------------------------------------
 
-DEFAULT_RATIOS = (18.0, [RATIO])      # (primary/front, secondary/rear)
+DEFAULT_RATIOS = (11.0, 11.0)      # demo defaults; real decks carry their own
 
 
 def _gear_ratios(motors):
@@ -78,7 +76,7 @@ def beta_to_r(beta, g_p, g_s):
         T_s = beta*T_wheel/g_s ,  T_p = (1-beta)*T_wheel/g_p
         r   = T_s / (T_p + T_s)
 
-    Sanity: an EVEN WHEEL split (beta=0.5) at 18:1/[RATIO]:1 needs r = 0.652,
+    Sanity: with unequal per-axle gearing, an EVEN WHEEL split needs r != 0.5,
     not 0.5 - which is precisely the error that over-drove the front axle."""
     beta = float(np.clip(beta, 0.0, 1.0))
     t_s = beta / max(g_s, 1e-9)
@@ -127,7 +125,7 @@ def _motor_eff_interpolator(motor):
     IMPORTANT (fixed 2026-07-18): this must resolve the motor data exactly
     the way fmu_inject does, otherwise the EMS optimises against a different
     motor than the one actually injected into the FMU. With 'map file is
-    truth' set, the rear rear-unit's real envelope is 197.6 Nm - sizing the split
+    truth' set, the rear unit's real envelope is 197.6 Nm - sizing the split
     against the 317.9 Nm field rating would ask for torque it cannot make."""
     try:
         import fmu_inject
@@ -169,7 +167,7 @@ def strat_single(w, T, **k):
 
 
 def strat_rear_only(w, T, **k):
-    """All combined MOTOR torque to the SECONDARY (rear, [RATIO]:1) axle.
+    """All combined MOTOR torque to the SECONDARY (rear) axle.
     Diagnostic mirror of single_motor for road-load / driveline studies."""
     return np.ones((len(w), len(T)))
 
@@ -210,7 +208,7 @@ def strat_fuzzy(w, T, **k):
 
 def strat_ratio_even(w, T, motors=None, **k):
     """Even WHEEL-torque split - the ratio-aware replacement for 'even'.
-    With 18:1/[RATIO]:1 this is r_ch = 0.652, not 0.5."""
+    With unequal gearing this is not r_ch = 0.5."""
     g_p, g_s = _gear_ratios(motors)
     return np.full((len(w), len(T)), beta_to_r(0.5, g_p, g_s))
 
@@ -228,7 +226,7 @@ def strat_traction(w, T, motors=None, params=None, **k):
     spinning up under launch.
 
     Envelope clamp matters on this vehicle: the front axle can make
-    235.2 Nm x 18 = 4234 Nm at the wheel but the rear only 197.6 x [RATIO] =
+    far more wheel torque per motor-Nm on the higher-geared axle:
     1895 Nm, so at high demand the rear simply cannot take the share that
     traction alone would want. The clamp keeps the map physically
     realisable instead of asking for torque the hardware cannot produce."""
@@ -267,7 +265,7 @@ def strat_loss_optimal(w, T, motors=None, n_split=41, params=None, **k):
 
     Fixed 2026-07-18 - the previous version had two ratio bugs: it assumed
     identical drive ratios, and it evaluated BOTH motors at the same speed.
-    In this vehicle a given road speed puts the front motor at 18/[RATIO] =
+    A given road speed puts the front motor at G_F/G_R =
     1.88x the rear motor's speed, and a given motor torque produces very
     different wheel torque per axle. Both are now handled, and the search is
     capped by each axle's traction share so the optimum can never ask an

@@ -32,9 +32,9 @@ MBD = r"C:\Users\George\OneDrive\Desktop\MBD - Copy For Testing"
 OVL = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\OVERLAY - Real vs Virtual"
 DEFAULT_REF = os.path.join(OVL, "REAL_mct_chunk_full.mf4")
 DEFAULT_WINDOW = os.path.join(OVL, "replay_window.json")
-TIRE_SRC = MBD + r"\demoEV_PS4SUV_265_50R20.tir"
-AERO = MBD + r"\demoEV_aero_dyno.aae"
-VEHJSON = MBD + r"\demoEV_prototype_0000000000.vehicle.json"
+TIRE_SRC = MBD + r"\demo EV_PS4SUV_265_50R20.tir"
+AERO = MBD + r"\demo EV_aero_dyno.aae"
+VEHJSON = MBD + r"\demo EV_prototype_0000000000.vehicle.json"
 STEP_S = 2.0
 
 

@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 
-SRC = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\demo EV Analysis\avl_regenoff_runs\AVLlit_tipin_50pct_20260726_075106"
+SRC = DATA_ROOT + r"\avl_regenoff_runs\AVLlit_tipin_50pct_20260726_075106"
 DECK = "AVLlit_tipin_50pct.xml"
 FMU = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\Simulink EMS\GeorgeEMS_Knee_v2.fmu"
 BAT = r"C:\Program Files\Altair\2025\hwsolvers\scripts\motionsolve.bat"

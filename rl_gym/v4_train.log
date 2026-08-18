@@ -1,0 +1,6 @@
+stock map       1187.2 Wh/km | disc 1008.28 | jerk 20.106 | wakes/min 50.36
+v4 wc0 s1      814.5 Wh/km | disc 550.72 | jerk 14.804 | wakes/min 64.89
+v4 wc0 s2      826.4 Wh/km | disc 137.12 | jerk 7.391 | wakes/min 13.56
+v4 wc1 s1      824.7 Wh/km | disc 134.05 | jerk 7.304 | wakes/min 14.53
+v4 wc1 s2      832.0 Wh/km | disc 604.07 | jerk 15.503 | wakes/min 67.80
+v4 done

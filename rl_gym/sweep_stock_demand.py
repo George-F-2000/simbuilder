@@ -23,7 +23,7 @@ from fmpy import extract, read_model_description, simulate_fmu
 FMU = (r"C:\Program Files\Altair\2025\hwdesktop\hw\mdl\mdllib\Common"
        r"\FMU_Library\Motor\FMU_source\FMUs\win64\Motor_PMSM_dual.fmu")
 HERE = os.path.dirname(os.path.abspath(__file__))
-R_WHEEL, G_F, G_R = [RADIUS], 18.0, [RATIO]
+from gym_env import R_WHEEL, G_F, G_R
 W_MAX = 1571.0
 
 unzip = extract(FMU)
@@ -107,7 +107,7 @@ pc = axes[2].pcolormesh(speeds*3.6, pedals, RS, cmap="RdYlBu_r", vmin=0, vmax=1,
                         shading="auto")
 fig.colorbar(pc, ax=axes[2], label="rear share")
 axes[2].set_xlabel("vehicle speed [km/h]"); axes[2].set_ylabel("pedal [%]")
-axes[2].set_title("Stock split behavior across the sweep\n(the demo EV map, exercised live)")
+axes[2].set_title("Stock split behavior across the sweep\n(the stock split map, exercised live)")
 fig.tight_layout()
 fig.savefig(os.path.join(HERE, "figs", "10_stock_demand_law.png"), dpi=140)
 

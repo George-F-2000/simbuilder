@@ -15,8 +15,8 @@ PLAIN LANGUAGE
 DATA PROVENANCE (nothing invented)
     - Motor eff/torque maps + battery params: extracted from the stock FMU
       (Simulink EMS/stock_fmu_data, see MODEL_BIBLE Ch.27.2).
-    - Mass [MASS] kg: sum of deck rigid bodies (vigrade_export).
-    - Ratios 18.0 front / [RATIO] rear, wheel R [RADIUS] m: deck / .tir.
+    - Mass: from the deck body sum, loaded via local config.
+    - Gear ratios and wheel radius: deck / .tir, via local config.
     - Demand axis sanity: r_ch T_dem max 591 Nm == 210 (front peak) + 380
       (rear peak) — combined MOTOR-side demand, confirmed.
     - Road load coefficients are textbook estimates (Crr 0.009, CdA 0.73) —
@@ -35,9 +35,19 @@ STOCK = os.path.join(os.path.dirname(os.path.dirname(HERE)),
                      "Simulink EMS", "stock_fmu_data")
 
 # ---- vehicle constants (provenance in header) -------------------------------
-MASS = [MASS]          # kg, deck body sum
-R_WHEEL = [RADIUS]        # m, .tir UNLOADED_RADIUS
-G_F, G_R = 18.0, [RATIO]   # motor:wheel ratios, front (front-unit) / rear (rear-unit)
+# Demo-vehicle defaults; a private, gitignored vehicle_local.json two levels
+# up (next to the app) overrides them with the real program values.
+import json as _json
+_cfg = {}
+for _cand in (os.path.join(os.path.dirname(HERE), "vehicle_local.json"),):
+    try:
+        _cfg = _json.load(open(_cand))
+    except Exception:
+        pass
+MASS = float(_cfg.get("mass_kg", 2100.0))
+R_WHEEL = float(_cfg.get("wheel_radius_m", 0.35))
+G_F = float(_cfg.get("gear_front", 11.0))
+G_R = float(_cfg.get("gear_rear", 11.0))
 CRR, CDA, RHO, GRAV = 0.009, 0.73, 1.225, 9.81
 ETA_DRIVELINE = 0.97    # gearbox mechanical
 AUX_W = 500.0           # accessory load, W

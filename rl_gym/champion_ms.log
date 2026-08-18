@@ -1,0 +1,105 @@
+deck patched: fmu_path x1, mode x1, adf x1
+solver PATH prepended with 0 usersub dirs
+INFO: location of C:\Program Files\Altair\2025\hwdesktop\hw\mdl\mdllib\Common\FMU_Library\EPAS\FMU_source\FMUs\win64\epas_control_with_motor.fmu verified
+INFO: location of C:\Program Files\Altair\2025\hwdesktop\hw\mdl\mdllib\Common\FMU_Library\ESP\FMU_source\FMUs\win64\esp.fmu verified
+WARNING: WARNING - Residual stiffness (CCX) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCY) is (almost) zero.
+WARNING: WARNING - Vertical load is above tire file maximum parameter FZMAX. It is capped at (16000).
+WARNING: WARNING - Residual stiffness (CCX) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCY) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCX) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCY) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCX) is (almost) zero.
+WARNING: WARNING - Residual stiffness (CCY) is (almost) zero.
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Failure in parsing "VARVAL(30500100)" for Request with id = 70000098!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Failure in parsing "VARVAL(30500200)" for Request with id = 70000098!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Failure in parsing "VARVAL(30500300)" for Request with id = 70000098!
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Failure in parsing "VARVAL(31200100)" for Request with id = 70000107!
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Failure in parsing "VARVAL(31300100)" for Request with id = 70000108!
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Failure in parsing "VARVAL(32700100)" for Request with id = 70000127!
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Failure in parsing "VARVAL(32800100)" for Request with id = 70000128!
+WARNING: Error in principal J for body [id=10704]: Ji+Jj<Jk!
+WARNING: Error in principal J for body [id=20704]: Ji+Jj<Jk!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+    Time        Initial           Final         No. of     Cumulative
+ Total Elapsed Time       : 1.160E+00 sec
+WARNING: Error in principal J for body [id=10704]: Ji+Jj<Jk!
+WARNING: Error in principal J for body [id=20704]: Ji+Jj<Jk!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+    Time        Initial           Final         No. of     Cumulative
+WARNING: Exiting - nonlinear solver step is too small
+ Total Elapsed Time       : 8.216E+00 sec
+WARNING: Error in principal J for body [id=10704]: Ji+Jj<Jk!
+WARNING: Error in principal J for body [id=20704]: Ji+Jj<Jk!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+    Time        Initial           Final         No. of     Cumulative
+ Total Elapsed Time       : 9.117E+00 sec
+WARNING: Element JOINT/303001 not found!
+WARNING: Element JOINT/303002 not found!
+WARNING: Error in principal J for body [id=10704]: Ji+Jj<Jk!
+WARNING: Error in principal J for body [id=20704]: Ji+Jj<Jk!
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+ Start Time                   : 0.000E+00
+ End   Time                   : 5.000E+00
+ Error Tolerance              : 1.000E-03
+ Time=9.170E-05; Order=1; H=9.170E-05 [Max Phi=4.741E-12]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [GET_CG_LOC]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+WARNING: Unable to get user function [MOTION_RATIO]
+ Time=5.001E-01; Order=1; H=2.225E-03 [Max Phi=7.271E-11]
+ Time=1.000E+00; Order=1; H=3.325E-04 [Max Phi=1.073E-10]
+ Time=1.500E+00; Order=1; H=2.868E-03 [Max Phi=9.459E-12]
+ Time=2.000E+00; Order=2; H=1.000E-02 [Max Phi=5.838E-12]
+ Time=2.510E+00; Order=2; H=1.000E-02 [Max Phi=5.042E-12]
+ Time=3.010E+00; Order=2; H=1.000E-02 [Max Phi=4.128E-12]
+WARNING: Stepsize has diminished consistently below h_min [=1.000E-06].
+ERROR: At time=3.088E+00 the integrator failed to proceed.
+ Total Elapsed Time       : 2.420E+02 sec
+ERROR: Simulation failed due to error encountered in analysis!
+<< ALTAIR DRIVER :: Error running TRANSIENT/TRANSIENT Simulation for Maneuver 1
+ERROR: Error encountered in processing xml input file!
+Errors reported during program execution
+solver exit: 0
+run dir: C:\Users\George\AppData\Local\Temp\champion_ms_run

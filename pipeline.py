@@ -378,7 +378,7 @@ def patch_gear_ratios(deck_text, spec, log):
         #   ...*<ratio>*AKISPL(VARVAL(33200300),0,<marker>)...
         # Patch it BY POSITION, not by matching the coupler's old value.
         # This deck ships couplers at a placeholder 3.7 while the expressions
-        # already carry the real per-axle ratios (18 front / [RATIO] rear), so
+        # already carry the deck's real per-axle ratios, so
         # the two diverge - a value-match against 3.7 would never fire and
         # the motor would keep feeling the old gearing.
         new_block, k = re.subn(
@@ -565,7 +565,7 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
     adf_name = os.path.basename(adf_match.group(1))
 
     # The deck may reference the ADF wherever MotionView exported it (the
-    # demo EV deck says '../../../Custom Events/x.adf'). OUR ADF is written
+    # demo deck says '../../../Custom Events/x.adf'). OUR ADF is written
     # into the run folder, and the solver runs with cwd = run folder - so
     # re-point the reference at the bare filename. Without this the solver
     # reads (or fails to find) the ORIGINAL scenario instead of ours.
@@ -629,7 +629,7 @@ TIME_LINE = re.compile(r"^\s*Time=([0-9.Ee+-]+);")
 
 
 def _solver_env(run_dir, deck_name):
-    """Usersub dlls referenced by the deck with absolute paths (the demo EV's
+    """Usersub dlls referenced by the deck with absolute paths (the vehicle's
     modelanimation.dll in hwdesktop\\hw\\bin\\win64) drag in dependencies
     from their own folder. Under MotionView that folder is on PATH; in our
     headless subprocess it isn't, and the usersub load fails even though

@@ -1,3 +1,11 @@
+import json as _j
+def _data_root():
+    try:
+        import os as _o
+        _lc = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), 'vehicle_local.json')))
+        return _lc.get('data_root', '..')
+    except Exception:
+        return '..'
 # -*- coding: utf-8 -*-
 """Performance event: ONE scenario that yields both headline numbers.
 
@@ -32,7 +40,7 @@ def _helpers():
         import sys, os
         sys.path.insert(0, os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            "..", "demo EV Analysis", "scripts"))
+            _data_root(), "scripts"))
         from avl_tipin import _hdr, _std, _ctrl, _end, _ol_thr, _ol_brk
     return _hdr, _std, _ctrl, _end, _ol_thr, _ol_brk
 

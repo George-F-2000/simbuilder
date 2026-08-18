@@ -448,9 +448,9 @@ class Api:
         try:
             out_root = self.settings.get("runs_dir") or out_root
             out = os.path.join(os.path.dirname(out_root), "VIgrade Export",
-                               "demoEV_" + time.strftime("%Y%m%d_%H%M%S"))
+                               "demo EV_" + time.strftime("%Y%m%d_%H%M%S"))
             man = vigrade_export.export_bundle(deck, out, tir, aae, fmu,
-                                               name="demoEV_0000000000",
+                                               name="demo EV_0000000000",
                                                spec=veh.get("spec") or veh)
             try:
                 os.startfile(out)

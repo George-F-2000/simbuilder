@@ -1,0 +1,7 @@
+### jerk-vision knee, seed 1
+   -> 658.2 Wh/km | discomfort 47.61 | jerkRMS 3.250 | engage/min 3.80
+### jerk-vision knee, seed 2
+   -> 643.9 Wh/km | discomfort 53.92 | jerkRMS 3.440 | engage/min 7.06
+
+BEST jerk-vision: seed 1 -> {'wh_per_km': np.float64(658.1728843663034), 'energy_wh': np.float64(2242.832382186425), 'dist_km': np.float64(3.4076645140825734), 'soc_drop_pct': 23.678551332203902, 'track_rmse_kmh': np.float64(6.009168611066889), 'jerk_rms': 3.2497412719487815, 'engage_per_min': 3.802625622453599, 'discomfort': np.float64(47.60501950810826)}
+blind knee reference: 587.2 Wh/km / 47.72 discomfort / 3.25 jerkRMS

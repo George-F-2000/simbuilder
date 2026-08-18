@@ -1,0 +1,7 @@
+wc=0    seed 1: 654.7 Wh/km | discomfort 39.68 | jerkRMS 2.959 | engage/min 3.80
+wc=0    seed 2: 723.2 Wh/km | discomfort 41.69 | jerkRMS 3.035 | engage/min 3.80
+wc=1    seed 1: 648.0 Wh/km | discomfort 39.90 | jerkRMS 2.951 | engage/min 5.98
+wc=1    seed 2: 723.1 Wh/km | discomfort 41.69 | jerkRMS 3.035 | engage/min 3.80
+wc=10   seed 1: 637.7 Wh/km | discomfort 50.23 | jerkRMS 3.308 | engage/min 8.69
+wc=10   seed 2: 683.8 Wh/km | discomfort 55.60 | jerkRMS 3.480 | engage/min 9.23
+done -> v3_results.json

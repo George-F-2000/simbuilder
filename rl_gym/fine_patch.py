@@ -8,7 +8,8 @@ from scipy.io import savemat
 
 FMU = (r"C:\Program Files\Altair\2025\hwdesktop\hw\mdl\mdllib\Common"
        r"\FMU_Library\Motor\FMU_source\FMUs\win64\Motor_PMSM_dual.fmu")
-R, GF, GR, WM = [RADIUS], 18.0, [RATIO], 1571.0
+from gym_env import R_WHEEL as R, G_F as GF, G_R as GR
+WM = 1571.0
 unzip = extract(FMU); md = read_model_description(FMU)
 OUT = ["front motor torque", "rear motor torque"]
 

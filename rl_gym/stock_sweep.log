@@ -1,0 +1,24 @@
+pedal   0%: Tcomb @15m/s =  -139.5 Nm
+pedal   5%: Tcomb @15m/s =   -64.0 Nm
+pedal  10%: Tcomb @15m/s =   -17.5 Nm
+pedal  15%: Tcomb @15m/s =    -0.1 Nm
+pedal  20%: Tcomb @15m/s =     0.1 Nm
+pedal  25%: Tcomb @15m/s =     1.9 Nm
+pedal  30%: Tcomb @15m/s =     5.8 Nm
+pedal  35%: Tcomb @15m/s =    11.8 Nm
+pedal  40%: Tcomb @15m/s =    19.8 Nm
+pedal  45%: Tcomb @15m/s =    30.0 Nm
+pedal  50%: Tcomb @15m/s =    42.2 Nm
+pedal  55%: Tcomb @15m/s =    56.5 Nm
+pedal  60%: Tcomb @15m/s =    72.9 Nm
+pedal  65%: Tcomb @15m/s =    91.3 Nm
+pedal  70%: Tcomb @15m/s =   111.9 Nm
+pedal  75%: Tcomb @15m/s =   134.5 Nm
+pedal  80%: Tcomb @15m/s =   159.2 Nm
+pedal  85%: Tcomb @15m/s =   186.0 Nm
+pedal  90%: Tcomb @15m/s =   214.9 Nm
+pedal  95%: Tcomb @15m/s =   245.9 Nm
+pedal 100%: Tcomb @15m/s =   278.9 Nm
+
+KEY: 50% pedal @ 54 km/h -> measured 42.2 Nm (deck run showed ~90; knee v1 assumed 147.6)
+saved: stock_demand_law.npz, stock_demand_transients.npz, figs/10_stock_demand_law.png
