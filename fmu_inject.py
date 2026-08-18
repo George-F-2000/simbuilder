@@ -3,7 +3,7 @@ fmu_inject.py
 ================================================================================
 Inject per-run motor data into an FMU that carries its motor maps INTERNALLY.
 
-Some decks (e.g. the demo EV deck) reference no external motor .mat files at all -
+Some decks (e.g. the demo deck) reference no external motor .mat files at all -
 the motor efficiency maps, torque envelopes and ratings live inside
 Motor_PMSM_dual.fmu at:
 

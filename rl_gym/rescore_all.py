@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from stable_baselines3 import PPO
 
-from gym_env import DemoSplitEnv, DT
+from gym_env import DemoSplitEnv, DT, R_WHEEL, G_F
 from policies import StockMapPolicy, LossGreedy, single_motor, even_split
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +37,7 @@ class MeasuredEnv(DemoSplitEnv):
 
     def step(self, r):
         t_dem = getattr(self, "_fdem", 0.0)
-        env_f = self.front.max_trq(min(self.v/[RADIUS]*18.0, 1571.0))
+        env_f = self.front.max_trq(min(self.v/R_WHEEL*G_F, 1571.0))
         r_min = max(0.0, (abs(t_dem) - env_f)/max(abs(t_dem), 1.0))
         return super().step(max(float(r), min(r_min, 1.0)))
 
@@ -50,7 +50,7 @@ def run(policy):
     return env.summary()
 
 
-entrants = [("stock demo EV map", lambda: (lambda o, e, p=StockMapPolicy(): p(o))),
+entrants = [("stock split map", lambda: (lambda o, e, p=StockMapPolicy(): p(o))),
             ("single_motor", lambda: (lambda o, e: 0.0)),
             ("even 50/50", lambda: (lambda o, e: 0.5)),
             ("loss-greedy", lambda: None)]  # special: needs env instance

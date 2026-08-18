@@ -299,7 +299,7 @@ const GLOSSARY = [
   ]],
   ["Powertrain & EMS", [
     ["EMS strategy", "How combined torque demand is split between the two axles. deck_default (the model's own map), traction (ratio-aware, load-based baseline), loss_optimal (min electrical loss), rule/fuzzy/even/single_motor."],
-    ["r_ch", "The torque-split map inside the motor FMU: fraction of the combined MOTOR-torque demand sent to the SECONDARY (rear) axle. 0 = front only, 0.5 = even MOTOR torque. Because the axles are geared 18:1 vs [RATIO]:1, an even WHEEL split is r_ch = 0.652, not 0.5."],
+    ["r_ch", "The torque-split map inside the motor FMU: fraction of the combined MOTOR-torque demand sent to the SECONDARY (rear) axle. 0 = front only, 0.5 = even MOTOR torque. With unequal per-axle gearing, an even WHEEL split is not r_ch = 0.5."],
     ["traction split", "The ratio-aware baseline (added 2026-07-19): divides WHEEL torque by axle load including weight transfer, then converts to r_ch through the drive ratios, then clamps to each motor's real envelope. Fixes the front-axle over-drive the deck's own map caused."],
     ["Map is truth", "Per-motor toggle: when a full motor-data .mat is uploaded, use ITS measured torque envelope verbatim; the kW/N·m/rpm fields become display-only for that motor."],
     ["Map coverage %", "How much of the injected motor efficiency map is measured data vs synthetic fill. Uncovered (light-load) cells are filled with a scaled model — disclosed per run in the log."],

@@ -9,7 +9,7 @@ import numpy as np
 import gymnasium as gym
 from stable_baselines3 import PPO
 
-from gym_env import DemoSplitEnv, DT, T_DEM_MAX
+from gym_env import DemoSplitEnv, DT, R_WHEEL, G_F, T_DEM_MAX
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 d = np.load(os.path.join(HERE, "stock_demand_law_fine.npz"))
@@ -36,7 +36,7 @@ class MeasuredEnv(DemoSplitEnv):
 
     def step(self, r):
         t_dem = self._fdem if hasattr(self, "_fdem") else 0.0
-        env_f = self.front.max_trq(min(self.v/[RADIUS]*18.0, 1571.0))
+        env_f = self.front.max_trq(min(self.v/R_WHEEL*G_F, 1571.0))
         r_min = max(0.0, (abs(t_dem) - env_f)/max(abs(t_dem), 1.0))
         return super().step(max(float(r), min(r_min, 1.0)))
 

@@ -47,10 +47,16 @@ import zipfile
 from datetime import datetime
 from xml.sax.saxutils import escape
 
-# demo EV prototype constants (SN-2499411196, the locked campaign vehicle)
+# demo EV constants (SN-2499411196, the locked campaign vehicle)
 WHEELBASE_M = 3.094
-FRONT_RATIO = [RATIO]        # front-unit induction motor, front axle
-REAR_RATIO = [RATIO]         # rear-unit, rear axle
+import json as _json
+try:
+    _v = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "vehicle_local.json")))
+except Exception:
+    _v = {}
+FRONT_RATIO = float(_v.get("gear_front", 11.0))   # demo default
+REAR_RATIO = float(_v.get("gear_rear", 11.0))
 
 
 # ---------------------------------------------------------------- deck readers
@@ -96,8 +102,8 @@ def _load_kandc():
     in which case VI-CRT's template suspension is used."""
     import json
     for p in (os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "..", "demo EV Analysis", "results", "kc_curve.json"),
-              r"C:\Users\George\OneDrive\Desktop\PhD Thesis\demo EV Analysis\results\kc_curve.json"):
+                           _v.get("data_root", ".."), "results", "kc_curve.json"),
+              os.path.join(_v.get("data_root", "."), "results", "kc_curve.json")):
         try:
             if os.path.isfile(p):
                 return json.load(open(p, encoding="utf-8"))

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from asammdf import MDF
 
-STOCK = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\demo EV Analysis\avl_regenoff_runs\AVLlit_tipin_50pct_20260726_075106\AVLlit_tipin_50pct_avldrive.mf4"
+STOCK = DATA_ROOT + r"\avl_regenoff_runs\AVLlit_tipin_50pct_20260726_075106\AVLlit_tipin_50pct_avldrive.mf4"
 KNEE = r"C:\Users\George\AppData\Local\Temp\knee_ms_run\AVLlit_tipin_50pct_avldrive.mf4"
 HERE = os.path.dirname(os.path.abspath(__file__))
 

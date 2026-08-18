@@ -14,7 +14,7 @@ BOXES = [  # (x, y, w, color, title, lines)
     (0.52, 0.66, 0.20, "#fef3c7", "3. THE BRAIN (policy)",
      ["Sees 3 numbers: speed,", "demand, battery %.", "Picks ONE number r:", "share sent to REAR."]),
     (0.77, 0.66, 0.21, "#dcfce7", "4. THE CAR (gym)",
-     ["Your demo EV's math: real", "motor maps, 2710 kg,", "real battery losses.", "2000x faster than the", "full 3D sim."]),
+     ["Your vehicle's math: real", "motor maps, 2710 kg,", "real battery losses.", "2000x faster than the", "full 3D sim."]),
     (0.77, 0.30, 0.21, "#fee2e2", "5. THE SCORECARD",
      ["Charges the brain for:", "battery burned (Wh) +", "rough riding (jerk,", "clunky rear wake-ups)."]),
     (0.52, 0.30, 0.20, "#fce7f3", "6. THE COACH (PPO)",

@@ -10,3 +10,12 @@ settings.json
 _build*.log
 _fromsource.log
 _viewertest.log
+vehicle_local.json
+rl_gym/*.npz
+rl_gym/*.mat
+rl_gym/*results*.json
+rl_gym/equal_footing.json
+rl_gym/gym_history.json
+MODEL_BIBLE.md
+ENGINEERING_NOTES.md
+CAMPAIGN.md

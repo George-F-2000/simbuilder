@@ -422,7 +422,7 @@ function generateHeaderText() {
   s += sectionHeader("VEHICLE_IC");
   s += "[VEHICLE_INITIAL_CONDITIONS]\n";
   s += "$These are wrt vehicle orientation marker\n";
-  // CREEP-START FLOOR: the demo EV deck cannot INITIALIZE at exactly v=0
+  // CREEP-START FLOOR: the demo deck cannot INITIALIZE at exactly v=0
   // (DASPK dies on the first step in every configuration - stock deck
   // included; empirically bisected 2026-07-17). 250 mm/s = 0.9 km/h
   // initializes fine and the driver immediately regulates to the demand.

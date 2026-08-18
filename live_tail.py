@@ -22,7 +22,7 @@ Standalone test:  python live_tail.py <run_dir_or_plt>
   asserts the streamed frames match plt_reader.read_plt value-for-value.
 
 *** KNOWN LIMITATION (verified 2026-07-20, against a live 96 km/h solve) ***
-For the demo EV deck, MotionSolve does NOT flush the .plt incrementally during a
+For the demo deck, MotionSolve does NOT flush the .plt incrementally during a
 run - it buffers channel data to the binary .mrf (the growing working file) and
 only writes the ASCII .plt/.abf at run END (deck ResOutput plt_file=TRUE). So at
 t=20s of a 34s run the .plt is 0 bytes while the .mrf is ~17 MB and climbing.

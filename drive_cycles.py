@@ -191,7 +191,7 @@ TAG = 'ENGINE_SPEED'
  4   650     125     0.45    0.05    0.1     0.1     0.05    0.05    0.05
  5   650     125     0.45    0.05    0.1     0.1     0.05    0.05    0.05
 """.format(name=name, title=title, n=len(t_s), sim=sim_time,
-           # creep-start floor: the demo EV deck cannot initialize at exactly
+           # creep-start floor: the demo deck cannot initialize at exactly
            # v=0 (first-step DASPK failure, any configuration - bisected
            # 2026-07-17). 250 mm/s = 0.9 km/h initializes fine; the driver
            # immediately regulates to the demanded trace (UDDS/HWFET start
