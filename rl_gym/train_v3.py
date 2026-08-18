@@ -23,16 +23,15 @@ class MeasuredEnv(DemoSplitEnv):
     """Demand shaped by the measured factory law + delivery guarantee."""
 
     def reset(self):
-        obs = super().reset()
         self._fdem = 0.0
-        return obs
+        return super().reset()
 
     def _demand(self):
         raw = super()._demand()
         tmax = float(np.interp(self.v, SPDS, TMAX_V))
         tmin = float(np.interp(self.v, SPDS, TMIN_V))
         raw = float(np.clip(raw, tmin, tmax))
-        self._fdem = ALPHA*self._fdem + (1 - ALPHA)*raw
+        self._fdem = ALPHA*getattr(self, '_fdem', 0.0) + (1 - ALPHA)*raw
         return self._fdem
 
     def step(self, r):
@@ -66,18 +65,19 @@ def score(model):
     return e.summary()
 
 
-rows = []
-for wc in (0.0, 1.0, 10.0):
-    for seed in (1, 2):
-        m = PPO("MlpPolicy", W(wc), verbose=0, seed=seed,
-                policy_kwargs=dict(net_arch=[64, 64]))
-        m.learn(total_timesteps=200_000)
-        s = score(m); s["wc"], s["seed"] = wc, seed
-        rows.append(s)
-        m.save(os.path.join(HERE, f"ppo_v3_wc{wc:g}_s{seed}"))
-        print(f"wc={wc:<4g} seed {seed}: {s['wh_per_km']:.1f} Wh/km | "
-              f"discomfort {s['discomfort']:.2f} | jerkRMS {s['jerk_rms']:.3f} | "
-              f"engage/min {s['engage_per_min']:.2f}", flush=True)
-import json
-json.dump(rows, open(os.path.join(HERE, "v3_results.json"), "w"), default=float, indent=2)
-print("done -> v3_results.json")
+if __name__ == "__main__":
+    rows = []
+    for wc in (0.0, 1.0, 10.0):
+        for seed in (1, 2):
+            m = PPO("MlpPolicy", W(wc), verbose=0, seed=seed,
+                    policy_kwargs=dict(net_arch=[64, 64]))
+            m.learn(total_timesteps=200_000)
+            s = score(m); s["wc"], s["seed"] = wc, seed
+            rows.append(s)
+            m.save(os.path.join(HERE, f"ppo_v3_wc{wc:g}_s{seed}"))
+            print(f"wc={wc:<4g} seed {seed}: {s['wh_per_km']:.1f} Wh/km | "
+                  f"discomfort {s['discomfort']:.2f} | jerkRMS {s['jerk_rms']:.3f} | "
+                  f"engage/min {s['engage_per_min']:.2f}", flush=True)
+    import json
+    json.dump(rows, open(os.path.join(HERE, "v3_results.json"), "w"), default=float, indent=2)
+    print("done -> v3_results.json")
