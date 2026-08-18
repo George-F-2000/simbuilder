@@ -71,6 +71,23 @@ def web_index():
     return os.path.join(BASE, "web", "index.html")   # in-repo since the move
 
 
+def _vehicle_prefix():
+    try:
+        import json as _vj, os as _vo
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        return _c.get('run_prefix', 'RUN_')
+    except Exception:
+        return 'RUN_'
+
+def _vehicle_name():
+    try:
+        import json as _vj, os as _vo
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        return _c.get('vehicle_name', 'demo_vehicle')
+    except Exception:
+        return 'demo_vehicle'
+
+
 class Api:
     def __init__(self):
         import pipeline
@@ -448,9 +465,9 @@ class Api:
         try:
             out_root = self.settings.get("runs_dir") or out_root
             out = os.path.join(os.path.dirname(out_root), "VIgrade Export",
-                               "demo EV_" + time.strftime("%Y%m%d_%H%M%S"))
+                               _vehicle_prefix() + time.strftime("%Y%m%d_%H%M%S"))
             man = vigrade_export.export_bundle(deck, out, tir, aae, fmu,
-                                               name="demo EV_0000000000",
+                                               name=_vehicle_name(),
                                                spec=veh.get("spec") or veh)
             try:
                 os.startfile(out)
