@@ -28,13 +28,19 @@ import numpy as np
 import pedal_map
 import pipeline
 
+import json as _vlj
+try:
+    _VLC = _vlj.load(open(os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), "vehicle_local.json")))
+except Exception:
+    _VLC = {}
 MBD = r"C:\Users\George\OneDrive\Desktop\MBD - Copy For Testing"
 OVL = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\OVERLAY - Real vs Virtual"
 DEFAULT_REF = os.path.join(OVL, "REAL_mct_chunk_full.mf4")
 DEFAULT_WINDOW = os.path.join(OVL, "replay_window.json")
-TIRE_SRC = MBD + r"\demo EV_PS4SUV_265_50R20.tir"
-AERO = MBD + r"\demo EV_aero_dyno.aae"
-VEHJSON = MBD + r"\demo EV_prototype_0000000000.vehicle.json"
+TIRE_SRC = os.path.join(MBD, _VLC.get("tire_file", "demo_tire.tir"))
+AERO = os.path.join(MBD, _VLC.get("aero_file", "demo_aero.aae"))
+VEHJSON = os.path.join(MBD, _VLC.get("vehicle_json", "demo.vehicle.json"))
 STEP_S = 2.0
 
 
