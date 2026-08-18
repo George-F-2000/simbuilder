@@ -71,6 +71,15 @@ def web_index():
     return os.path.join(BASE, "web", "index.html")   # in-repo since the move
 
 
+def _runs_dirname():
+    try:
+        import json as _vj, os as _vo
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        return _c.get('runs_dirname', 'ev_runs')
+    except Exception:
+        return 'ev_runs'
+
+
 def _vehicle_prefix():
     try:
         import json as _vj, os as _vo
@@ -454,7 +463,7 @@ class Api:
         aae = veh.get("aero_path")
         # newest injected powertrain FMU carries the real front-unit/rear-unit maps + EMS
         roots = [self.settings.get("runs_dir"),
-                 os.path.join(os.environ.get("TEMP", ""), "demoev_runs")]
+                 os.path.join(os.environ.get("TEMP", ""), _runs_dirname())]
         fmus = []
         for r in roots:
             if r and os.path.isdir(r):
