@@ -140,11 +140,17 @@ def _std(ch, mx, mn, init):
 
 
 def _ctrl(n):
-    return ("STEERING_CONTROLLER    = 'OL_STEER'\n"
-            "THROTTLE_CONTROLLER    = 'OL_THROTTLE_%d'\n" % n +
-            "BRAKE_CONTROLLER       = 'OL_BRAKE_%d'\n" % n +
-            "GEAR_CONTROLLER        = 'GEAR_CLUTCH_CONTROL'\n"
-            "CLUTCH_CONTROLLER      = 'GEAR_CLUTCH_CONTROL'\n")
+    # The Altair Driver requires the (CONTROLLERS) table grammar; the
+    # key=value CONTROLLER form makes it end the run silently at maneuver
+    # load (found in the 2026-08-19 demo dress rehearsal - this feature had
+    # never completed a live run before that night).
+    return ("(CONTROLLERS)\n"
+            "{DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }\n"
+            " STEER                     OL_STEER                  NONE                     \n"
+            " THROTTLE                  OL_THROTTLE_%d             NONE                     \n" % n +
+            " BRAKE                     OL_BRAKE_%d                NONE                     \n" % n +
+            " GEAR                      GEAR_CLUTCH_CONTROL       NONE                     \n"
+            " CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     \n")
 
 
 def _ol_const(n, channel, value):
