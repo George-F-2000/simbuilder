@@ -39,7 +39,8 @@ STOCK = os.path.join(os.path.dirname(os.path.dirname(HERE)),
 # up (next to the app) overrides them with the real program values.
 import json as _json
 _cfg = {}
-for _cand in (os.path.join(os.path.dirname(HERE), "vehicle_local.json"),):
+for _cand in (os.path.join(os.path.dirname(HERE), "vehicle_local.json"),
+              os.path.join(HERE, "..", "vehicle_local.json")):
     try:
         _cfg = _json.load(open(_cand))
     except Exception:

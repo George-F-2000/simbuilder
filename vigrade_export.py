@@ -51,8 +51,11 @@ from xml.sax.saxutils import escape
 WHEELBASE_M = 3.094
 import json as _json
 try:
-    _v = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      "vehicle_local.json")))
+    import sys as _vgs
+    _v = _json.load(open(os.path.join(
+        os.path.dirname(_vgs.executable) if getattr(_vgs, "frozen", False)
+        else os.path.dirname(os.path.abspath(__file__)),
+        "vehicle_local.json")))
 except Exception:
     _v = {}
 FRONT_RATIO = float(_v.get("gear_front", 11.0))   # demo default
