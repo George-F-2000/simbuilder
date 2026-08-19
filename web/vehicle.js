@@ -288,9 +288,11 @@ function renderMotorCards() {
     const resetBtn = node.querySelector(".reset-eff");
     const pickBtn = node.querySelector(".pick-eff");
     const showEff = () => {
+      const p = m.effMapPath || "";
       pathEl.textContent = m.effMapInline
         ? "MotorBuilder custom map"
-        : (m.effMapPath || "synthetic (built from ratings)");
+        : (p ? p.split(/[\/]/).pop() : "synthetic (built from ratings)");
+      pathEl.title = m.effMapInline ? "MotorBuilder custom map" : p;
       resetBtn.classList.toggle("hidden", !m.effMapPath && !m.effMapInline);
     };
     showEff();
