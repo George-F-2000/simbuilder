@@ -73,8 +73,8 @@ def web_index():
 
 def _runs_dirname():
     try:
-        import json as _vj, os as _vo
-        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        import json as _vj, os as _vo, sys as _vs
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vs.executable) if getattr(_vs, 'frozen', False) else _vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
         return _c.get('runs_dirname', 'ev_runs')
     except Exception:
         return 'ev_runs'
@@ -82,16 +82,16 @@ def _runs_dirname():
 
 def _vehicle_prefix():
     try:
-        import json as _vj, os as _vo
-        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        import json as _vj, os as _vo, sys as _vs
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vs.executable) if getattr(_vs, 'frozen', False) else _vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
         return _c.get('run_prefix', 'RUN_')
     except Exception:
         return 'RUN_'
 
 def _vehicle_name():
     try:
-        import json as _vj, os as _vo
-        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
+        import json as _vj, os as _vo, sys as _vs
+        _c = _vj.load(open(_vo.path.join(_vo.path.dirname(_vs.executable) if getattr(_vs, 'frozen', False) else _vo.path.dirname(_vo.path.abspath(__file__)), 'vehicle_local.json')))
         return _c.get('vehicle_name', 'demo_vehicle')
     except Exception:
         return 'demo_vehicle'

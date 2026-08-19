@@ -30,8 +30,11 @@ import pipeline
 
 import json as _vlj
 try:
-    _VLC = _vlj.load(open(os.path.join(os.path.dirname(
-        os.path.abspath(__file__)), "vehicle_local.json")))
+    import sys as _vls
+    _VLC = _vlj.load(open(os.path.join(
+        os.path.dirname(_vls.executable) if getattr(_vls, "frozen", False)
+        else os.path.dirname(os.path.abspath(__file__)),
+        "vehicle_local.json")))
 except Exception:
     _VLC = {}
 MBD = r"C:\Users\George\OneDrive\Desktop\MBD - Copy For Testing"

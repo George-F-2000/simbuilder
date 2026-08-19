@@ -1,8 +1,8 @@
 import json as _j
 def _data_root():
     try:
-        import os as _o
-        _lc = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), 'vehicle_local.json')))
+        import os as _o, sys as _s
+        _lc = _j.load(open(_o.path.join(_o.path.dirname(_s.executable) if getattr(_s, 'frozen', False) else _o.path.dirname(_o.path.abspath(__file__)), 'vehicle_local.json')))
         return _lc.get('data_root', '..')
     except Exception:
         return '..'

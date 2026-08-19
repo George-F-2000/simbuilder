@@ -9,7 +9,8 @@ import shutil
 import subprocess
 import sys
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_DIR = (os.path.dirname(sys.executable) if getattr(sys, 'frozen', False)
+           else os.path.dirname(os.path.abspath(__file__)))
 GYM = os.path.join(APP_DIR, "rl_gym")
 LOG = os.path.join(GYM, "ui_session.log")
 
