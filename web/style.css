@@ -281,7 +281,15 @@ body.dark .apply-check.deck-asis {
 
 .eff-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .eff-label { font-size: 12px; font-weight: 600; color: #444; flex: 0 0 auto; }
-.eff-path { flex: 1; }
+.eff-path {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
 
 .mat-label {
   flex-basis: 150px; overflow: hidden; text-overflow: ellipsis;
