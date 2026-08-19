@@ -31,7 +31,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['PyQt5', 'PySide6', 'PyQt6', 'PySide2', 'torch', 'stable_baselines3', 'gymnasium', 'plotly'],
     noarchive=False,
     optimize=0,
 )
