@@ -557,6 +557,20 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
     with open(deck_src, encoding="utf-8", errors="replace") as fh:
         deck_text = fh.read()
 
+    # Bushing rotational-damping repair (settings 'bushing_damping_scale',
+    # default 1.0 = off). The exported deck's Force_Bushing elements carry
+    # ct[xyz] ~1-2 against kt 100-200 - effectively undamped rotation, the
+    # root cause of the constant-amplitude ~8 Hz mode. Titrated 2026-08-20:
+    # x10 no effect, x30 kills the mode entirely, launch behavior unchanged.
+    _bds = float(settings.get("bushing_damping_scale", 1.0) or 1.0)
+    if _bds != 1.0:
+        deck_text, _nbd = re.subn(
+            r'(ct[xyz]\s+=\s+")([\d.]+)"',
+            lambda m: m.group(1) + str(float(m.group(2)) * _bds) + '"',
+            deck_text)
+        log("  bushing rotational damping x{:g} applied ({} fields)".format(
+            _bds, _nbd))
+
     adf_match = ADF_REF.search(deck_text)
     if not adf_match:
         raise ValueError(
