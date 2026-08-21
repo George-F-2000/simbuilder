@@ -36,6 +36,17 @@ ab('simulink/Lookup Tables/2-D Lookup Table', 'measured demand map', ...
    'Table', 'Tmap');
 ab('simulink/Discrete/Discrete Transfer Fcn', 'demand filter 50ms', ...
    'Numerator', '[0.0198]', 'Denominator', '[1 -0.9802]', 'SampleTime', '0.001');
+ab('simulink/Lookup Tables/1-D Lookup Table', 'creep lut', ...
+   'BreakpointsForDimension1', '[0 0.5 1.0 1.5 2.0 3.0]', ...
+   'Table', '[12 10 5 -60 -250 -1000]');
+ab('simulink/Logic and Bit Operations/Compare To Constant', 'creep gate', ...
+   'relop', '<', 'const', '12');
+ab('simulink/Signal Attributes/Data Type Conversion', 'creep gate dbl', ...
+   'OutDataTypeStr', 'double');
+ab('simulink/Sources/Constant', 'no floor', 'Value', '-1e5');
+ab('simulink/Signal Routing/Switch', 'creep switch', 'Criteria', 'u2 > Threshold', ...
+   'Threshold', '0.5');
+ab('simulink/Math Operations/MinMax', 'creep floor', 'Function', 'max', 'Inputs', '2');
 % envelopes (for clipping only now)
 ab('simulink/Lookup Tables/1-D Lookup Table', 'front envelope', ...
    'BreakpointsForDimension1', 'spd_f', 'Table', 'trq_f');
@@ -109,7 +120,13 @@ end
 L = @(a, b) add_line(mdl, a, b, 'autorouting', 'on');
 L('throttle/1', 'measured demand map/1');
 L('vehicleSpeed/1', 'measured demand map/2');
-L('measured demand map/1', 'demand filter 50ms/1');
+L('vehicleSpeed/1', 'creep lut/1');
+L('throttle/1', 'creep gate/1');   L('creep gate/1', 'creep gate dbl/1');
+L('creep lut/1', 'creep switch/1'); L('creep gate dbl/1', 'creep switch/2');
+L('no floor/1', 'creep switch/3');
+L('measured demand map/1', 'creep floor/1');
+L('creep switch/1', 'creep floor/2');
+L('creep floor/1', 'demand filter 50ms/1');
 L('motorSpeedFront/1', 'front envelope/1');
 L('motorSpeedRear/1', 'rear envelope/1');
 L('front envelope/1', 'neg env f/1');  L('rear envelope/1', 'neg env r/1');

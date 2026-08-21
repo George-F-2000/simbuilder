@@ -36,6 +36,17 @@ ab('simulink/Lookup Tables/2-D Lookup Table', 'measured demand map', ...
    'Table', 'Tmap');
 ab('simulink/Discrete/Discrete Transfer Fcn', 'demand filter 50ms', ...
    'Numerator', '[0.0198]', 'Denominator', '[1 -0.9802]', 'SampleTime', '0.001');
+ab('simulink/Lookup Tables/1-D Lookup Table', 'creep lut', ...
+   'BreakpointsForDimension1', '[0 0.5 1.0 1.5 2.0 3.0]', ...
+   'Table', '[12 10 5 -60 -250 -1000]');
+ab('simulink/Logic and Bit Operations/Compare To Constant', 'creep gate', ...
+   'relop', '<', 'const', '12');
+ab('simulink/Signal Attributes/Data Type Conversion', 'creep gate dbl', ...
+   'OutDataTypeStr', 'double');
+ab('simulink/Sources/Constant', 'no floor', 'Value', '-1e5');
+ab('simulink/Signal Routing/Switch', 'creep switch', 'Criteria', 'u2 > Threshold', ...
+   'Threshold', '0.5');
+ab('simulink/Math Operations/MinMax', 'creep floor', 'Function', 'max', 'Inputs', '2');
 % envelopes (for clipping only now)
 ab('simulink/Lookup Tables/1-D Lookup Table', 'front envelope', ...
    'BreakpointsForDimension1', 'spd_f', 'Table', 'trq_f');
@@ -81,6 +92,10 @@ ab('simulink/Math Operations/Product', 'gate ctl');
 ab('simulink/Signal Routing/Switch', 'r gate', 'Criteria', 'u2 > Threshold', ...
    'Threshold', '0.5');
 ab('simulink/Sources/Constant', 'zero r', 'Value', '0');
+% gate handover slew: the engage transient (disturb peak 1.18, Bible 29.7)
+% came from r snapping 0 -> r_final in one step; ramp it instead
+ab('simulink/Discontinuities/Rate Limiter', 'gate slew', ...
+   'RisingSlewLimit', '1.5', 'FallingSlewLimit', '-3');
 % ---- split + double-sided envelope clip ----
 ab('simulink/Math Operations/Product', 'T rear raw');
 ab('simulink/Sources/Constant', 'one', 'Value', '1');
@@ -121,7 +136,13 @@ end
 L = @(a, b) add_line(mdl, a, b, 'autorouting', 'on');
 L('throttle/1', 'measured demand map/1');
 L('vehicleSpeed/1', 'measured demand map/2');
-L('measured demand map/1', 'demand filter 50ms/1');
+L('vehicleSpeed/1', 'creep lut/1');
+L('throttle/1', 'creep gate/1');   L('creep gate/1', 'creep gate dbl/1');
+L('creep lut/1', 'creep switch/1'); L('creep gate dbl/1', 'creep switch/2');
+L('no floor/1', 'creep switch/3');
+L('measured demand map/1', 'creep floor/1');
+L('creep switch/1', 'creep floor/2');
+L('creep floor/1', 'demand filter 50ms/1');
 L('motorSpeedFront/1', 'front envelope/1');
 L('motorSpeedRear/1', 'rear envelope/1');
 L('front envelope/1', 'neg env f/1');  L('rear envelope/1', 'neg env r/1');
@@ -142,8 +163,9 @@ L('vehicleSpeed/1', 'spd ok/1');    L('spd ok/1', 'spd ok dbl/1');
 L('T hyst/1', 'gate ctl/1');        L('spd ok dbl/1', 'gate ctl/2');
 L('r final/1', 'r gate/1');         L('gate ctl/1', 'r gate/2');
 L('zero r/1', 'r gate/3');
-L('r gate/1', 'T rear raw/1');      L('demand filter 50ms/1', 'T rear raw/2');
-L('one/1', 'one minus r/1');        L('r gate/1', 'one minus r/2');
+L('r gate/1', 'gate slew/1');
+L('gate slew/1', 'T rear raw/1');      L('demand filter 50ms/1', 'T rear raw/2');
+L('one/1', 'one minus r/1');        L('gate slew/1', 'one minus r/2');
 L('one minus r/1', 'T front raw/1'); L('demand filter 50ms/1', 'T front raw/2');
 L('T front raw/1', 'front clip/1'); L('front envelope/1', 'front clip/2');
 L('front clip/1', 'front floor/1'); L('neg env f/1', 'front floor/2');
@@ -172,9 +194,9 @@ L('batt P/1', 'combBattPowerDemand/1');
 L('demand filter 50ms/1', 'combMotorTorqueDemand/1');
 L('zero eff r/1', 'rearMotorEff/1');
 L('zero eff f/1', 'frontMotorEff/1');
-L('r gate/1', 'torqueSplitRear/1');
+L('gate slew/1', 'torqueSplitRear/1');
 L('demand filter 50ms/1', 'predCombTorqueDemand/1');
-L('r gate/1', 'torqueRatioRear/1');
+L('gate slew/1', 'torqueRatioRear/1');
 L('one minus r/1', 'torqueRatioFront/1');
 
 Simulink.BlockDiagram.arrangeSystem(mdl);
