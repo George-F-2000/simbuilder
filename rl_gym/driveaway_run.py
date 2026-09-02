@@ -70,7 +70,7 @@ for old, new in ADF_EDITS:
     assert adf.count(old) == 1, f"ADF anchor not unique/found: {old[:60]!r}"
     adf = adf.replace(old, new)
 open(adf_path, "w", encoding="utf-8").write(adf)
-print("ADF: driveaway edits applied (VX0=10, brake hold/release, 25% pedal)",
+print("ADF: driveaway edits applied (VX0=10, brake hold/release, 40% pedal)",
       flush=True)
 
 deck_path = os.path.join(run, DECK)
