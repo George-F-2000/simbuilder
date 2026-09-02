@@ -110,9 +110,9 @@ ab('simulink/Math Operations/Product', 'P front');
 ab('simulink/Math Operations/Product', 'P rear');
 ab('simulink/Math Operations/Add', 'P mech', 'Inputs', '++');
 ab('simulink/Math Operations/Gain', 'batt P', 'Gain', '1/0.85');
-ab('simulink/Math Operations/Gain', 'to SOC rate', 'Gain', '-1/(9472*3600)');
+ab('simulink/Math Operations/Gain', 'to SOC rate', 'Gain', '-1/(102000*3600)');  % 102 kWh pack (vehicle definition)
 ab('simulink/Discrete/Discrete-Time Integrator', 'SOC integ', ...
-   'InitialCondition', '0.75', 'SampleTime', '0.001');
+   'InitialCondition', '0.30', 'SampleTime', '0.001');  % every run starts at 30% SOC
 % ---- flags + stubs + vcu anchor ----
 ab('simulink/Logic and Bit Operations/Compare To Constant', 'state r', 'relop', '>', 'const', '0.5');
 ab('simulink/Logic and Bit Operations/Compare To Constant', 'state f', 'relop', '>', 'const', '0.5');

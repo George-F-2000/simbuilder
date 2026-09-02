@@ -18,7 +18,9 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, r"C:\Users\George\OneDrive\Desktop\PhD Thesis\CSV to MDF Converter\plt-to-mf4-app")
+# pipeline-app converter: reconstructs BattSOC for the real pack from the
+# BattPower integral (the stock FMU's pack size and SOC start are compiled in)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 SRC = DATA_ROOT + "/avl_regenoff_runs/AVLlit_tipin_50pct_20260726_075106"
 DECK = "AVLlit_tipin_50pct.xml"
@@ -78,7 +80,14 @@ except subprocess.TimeoutExpired:
 print(f"{tag}: solver exit {rc} in {(time.time()-t0)/60:.1f} min", flush=True)
 
 from converter import convert
-p = convert(os.path.join(run, "AVLlit_tipin_50pct.plt"))
+_spec = {}
+try:
+    _spec = _j.load(open(os.path.join(SRC, "vehicle.json")))
+except Exception:
+    pass
+p = convert(os.path.join(run, "AVLlit_tipin_50pct.plt"),
+            pack_kwh=float(_spec.get("packKWh") or 0) or None,
+            soc_start=_spec.get("packSOCstart", 0.30))  # every run starts at 30% SOC
 from score_mf4 import score
 s = score(p)
 print(f"{tag}: {s['km']:.2f} km | {s['wh_per_km']:.1f} Wh/km | "
