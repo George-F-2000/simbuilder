@@ -7,8 +7,8 @@
 %   - negative-torque clipping so regen respects the envelopes
 here = fileparts(mfilename('fullpath'));
 pw = load(fullfile(here, 'champion_policy_weights.mat'));
-fm = load(fullfile(here, 'stock_fmu_data', 'one_strlineacc_0_frnt_motor_data.mat'));
-rm = load(fullfile(here, 'stock_fmu_data', 'one_strlineacc_0_rear_motor_data.mat'));
+fm = load(fullfile(here, 'real_motor_maps', 'deck_frnt_motor_data.mat'));  % real AAM map (deck FMU copy)
+rm = load(fullfile(here, 'real_motor_maps', 'deck_rear_motor_data.mat'));  % real SRM map (deck FMU copy)
 dl = load(fullfile(here, 'stock_demand_law.mat'));
 
 mdl = 'GeorgeEMS_Champion';
