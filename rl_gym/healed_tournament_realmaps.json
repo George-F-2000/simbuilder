@@ -1,0 +1,39 @@
+{
+  "rows": {
+    "stock": {
+      "km": 1.0007957001391483,
+      "wh_per_km": 172.6109719326506,
+      "soc_drop_pct": 1.9198000000000093,
+      "jerk_rms": 3.7996216859420064,
+      "disturb_rms": 0.03509316212760775,
+      "disturb_peak": 0.8863279854688672,
+      "engage_events": 3,
+      "eng_per_min": 1.533637788835117
+    },
+    "knee_v2": {
+      "km": 1.009526953613717,
+      "wh_per_km": 198.06237392253755,
+      "soc_drop_pct": 2.110900000000001,
+      "jerk_rms": 0.656021334456768,
+      "disturb_rms": 0.01618190334677618,
+      "disturb_peak": 0.31996841827429456,
+      "engage_events": 0,
+      "eng_per_min": 0.0
+    },
+    "champion": {
+      "km": 1.112325785453717,
+      "wh_per_km": 171.0234586915874,
+      "soc_drop_pct": 2.0082999999999913,
+      "jerk_rms": 0.6055011115037479,
+      "disturb_rms": 0.01501264266118298,
+      "disturb_peak": 0.3206093249833105,
+      "engage_events": 3,
+      "eng_per_min": 1.4837162145453646
+    }
+  },
+  "source": {
+    "stock": "banked round-6 scores",
+    "knee_v2": "knee_v2_20260902_154939",
+    "champion": "champion_20260902_161844"
+  }
+}
