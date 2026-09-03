@@ -108,7 +108,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_3
-$ cruise 100 km/h at p_eq 50.4%
+$ cruise 100 km/h at p_eq 40.8%
 [MANEUVER_3]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -122,7 +122,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_3]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.5039)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4079)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_3
 [OL_BRAKE_3]
@@ -180,7 +180,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_6
-$ cruise 80 km/h at p_eq 42.0%
+$ cruise 80 km/h at p_eq 35.5%
 [MANEUVER_6]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -194,7 +194,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_6]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4205)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.3553)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_6
 [OL_BRAKE_6]
@@ -272,7 +272,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_10
-$ cruise 50 km/h at p_eq 29.6%
+$ cruise 50 km/h at p_eq 27.9%
 [MANEUVER_10]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -286,7 +286,7 @@ $----------------------------------------------------------------------OL_THROTT
 [OL_THROTTLE_10]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2962)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2786)'
 SIGNAL_CHANNEL         = 0
 $-------------------------------------------------------------------------OL_BRAKE_10
 [OL_BRAKE_10]
