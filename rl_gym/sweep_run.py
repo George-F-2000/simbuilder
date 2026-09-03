@@ -79,7 +79,7 @@ t0 = time.time()
 proc = subprocess.Popen([BAT, DECK], cwd=run, env=env,
                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 try:
-    rc = proc.wait(timeout=(8 if not fmu else 3)*3600)   # stock at 1 ms driver step runs 4-6x longer
+    rc = proc.wait(timeout=(15 if not fmu else 4)*3600)  # stock at 1 ms driver step: driveaway family needs ~11 h
 except subprocess.TimeoutExpired:
     subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)])
     rc = "KILLED@3h"

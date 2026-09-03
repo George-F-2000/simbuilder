@@ -49,8 +49,8 @@ $-----------------------------------------------------------------------MANEUVER
 $----------------------------------------------------------------------MANEUVERS_LIST
 [MANEUVERS_LIST]
 {name            simulation_time      h_max           print_interval }
-'MANEUVER_1'     5                    0.01            0.01            
-'MANEUVER_2'     30                   0.01            0.01            
+'MANEUVER_1'     5                    0.001           0.01            
+'MANEUVER_2'     30                   0.001           0.01            
 'MANEUVER_3'     15                   0.01            0.01            
 'MANEUVER_4'     25                   0.01            0.01            
 'MANEUVER_5'     15                   0.01            0.01            
@@ -63,7 +63,7 @@ $----------------------------------------------------------------------MANEUVERS
 'MANEUVER_12'     6                    0.01            0.01            
 'MANEUVER_13'     6                    0.01            0.01            
 $--------------------------------------------------------------------------MANEUVER_1
-$ hold
+$ hold (brake 0.35)
 [MANEUVER_1]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -96,7 +96,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         8333.333   277.778    0.001     
+ LONG_VEL   0          Y          GT         8333.333   694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_2
 [OL_THROTTLE_2]
 TAG                    = 'OPENLOOP'
@@ -143,7 +143,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         13888.889  416.667    0.001     
+ LONG_VEL   0          Y          GT         13888.889  694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_4
 [OL_THROTTLE_4]
 TAG                    = 'OPENLOOP'
@@ -190,7 +190,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         22222.222  416.667    0.001     
+ LONG_VEL   0          Y          GT         22222.222  694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_6
 [OL_THROTTLE_6]
 TAG                    = 'OPENLOOP'
@@ -281,7 +281,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         27777.778  416.667    0.001     
+ LONG_VEL   0          Y          GT         27777.778  694.444    0.001     
 $----------------------------------------------------------------------OL_THROTTLE_10
 [OL_THROTTLE_10]
 TAG                    = 'OPENLOOP'
