@@ -10,6 +10,47 @@ from asammdf import MDF
 from scipy.signal import butter, filtfilt
 
 
+_MAPS = None
+
+
+def _common_loss_maps():
+    """Deck-FMU motor efficiency maps (the same for every entrant) + the stock
+    FMU's inverter/converter/battery loss constants -> ONE loss model."""
+    global _MAPS
+    if _MAPS is None:
+        import os
+        from scipy.io import loadmat
+        from scipy.interpolate import RegularGridInterpolator as RGI
+        d = r"C:\Users\George\OneDrive\Desktop\PhD Thesis\Simulink EMS\real_motor_maps"
+        _MAPS = {}
+        for tag, f in (("EM1", "deck_frnt_motor_data.mat"), ("EM2", "deck_rear_motor_data.mat")):
+            x = loadmat(os.path.join(d, f))
+            sp = np.asarray(x["m_map_eff_spd"]).ravel()
+            tq = np.asarray(x["m_map_eff_trq"]).ravel(); e = np.asarray(x["m_eff_map"], float)
+            tr = np.asarray(x["m_map_eff_trq_regen"]).ravel(); er = np.asarray(x["m_eff_map_regen"], float)
+            _MAPS[tag] = (RGI((sp, tq), np.nan_to_num(e), bounds_error=False, fill_value=None),
+                          RGI((sp, tr), np.nan_to_num(er), bounds_error=False, fill_value=None))
+    return _MAPS
+
+
+def common_loss_battery_power(m):
+    """Battery power [W] rebuilt from motor torque x speed through the common
+    loss model: motor efficiency map (motoring / regen), inverter 0.95,
+    converter 0.95, battery 5% each way (stock FMU parameters)."""
+    maps = _common_loss_maps()
+    P = None
+    for tag in ("EM1", "EM2"):
+        T = np.asarray(m.get(tag + "Torque").samples, float)
+        w = np.asarray(m.get(tag + "Speed").samples, float) * 2*np.pi/60   # 1/min -> rad/s
+        mech = T*w
+        eta_m = np.clip(maps[tag][0](np.column_stack([w, np.abs(T)])), 0.3, 1.0)
+        eta_r = np.clip(maps[tag][1](np.column_stack([w, T])), 0.3, 1.0)
+        chain = 0.95*0.95
+        p = np.where(mech >= 0, mech/(eta_m*chain)/0.95, mech*eta_r*chain*0.95)
+        P = p if P is None else P + p
+    return P
+
+
 def score(path):
     m = MDF(path)
     def g(ch):
@@ -29,7 +70,13 @@ def score(path):
     engages = int(np.sum(np.diff(awake.astype(int)) != 0))
     km = float(np.trapezoid(v/3.6, t)/1000.0)
     wh = float(np.trapezoid(np.abs(pb), t)/3600.0)*(1000.0 if np.abs(pb).max() < 500 else 1.0)
+    try:
+        pc = common_loss_battery_power(m)
+        wh_common = float(np.trapezoid(pc, t)/3600.0)          # NET Wh, regen credited
+    except Exception:
+        wh_common = float("nan")
     return {"km": km, "wh_per_km": wh/max(km, 1e-9),
+            "wh_per_km_common": wh_common/max(km, 1e-9),
             "soc_drop_pct": float((soc[0]-soc[-1]) if soc.max() > 2 else 100*(soc[0]-soc[-1])),
             "jerk_rms": float(np.sqrt(np.mean(jerk**2))),
             "disturb_rms": float(np.sqrt(np.mean(dist_sig**2))),
