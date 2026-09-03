@@ -8,17 +8,19 @@ $py  = 'C:\Users\George\AppData\Local\Programs\Python\Python312\python.exe'
 $gym = 'C:\Users\George\OneDrive\Desktop\PhD Thesis\pipeline-app\rl_gym'
 $log = Join-Path $gym 'master_queue.log'
 function Log($s) { $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $s"; Add-Content $log $line -Encoding utf8; Write-Output $line }
-Log "master queue armed; waiting for the champion sweep chain to release the solver"
+Log "master queue armed (v2: A2-A4 champion events, B tournament, C knee sweeps, D stock sweeps); waiting for a free solver"
 $quiet = 0
 while ($quiet -lt 5) {
   if (Get-Process msolve -ErrorAction SilentlyContinue) { $quiet = 0 } else { $quiet++ }
   Start-Sleep -Seconds 60
 }
 Log "solver free for 5 min - stage A2: champion driveaway family rerun (gentler stops)"
-function Run($label, $args) {
+function Run($label, $argv) {
+  # NB: never name this parameter $args - that is PowerShell's automatic
+  # variable and the splat comes out empty (python launched bare, 2026-09-03)
   Log "--- $label"
   try {
-    & $py -u @args 2>&1 | ForEach-Object { Add-Content $log "    $_" -Encoding utf8 }
+    & $py -u @argv 2>&1 | ForEach-Object { Add-Content $log "    $_" -Encoding utf8 }
     if ($LASTEXITCODE -ne 0) { Log "!!! $label exited $LASTEXITCODE" } else { Log "ok  $label" }
   } catch { Log "!!! $label threw: $_" }
 }
