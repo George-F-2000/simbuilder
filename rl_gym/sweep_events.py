@@ -96,9 +96,14 @@ class Event:
         self._add(secs, expr, False, brake, end, note or "pedal %.0f%%" % (100*target), hmax)
 
     def launch(self, secs, target, to_kph, note=""):
-        """driveaway from a (dynamic or static) standstill: fine step, brake released at the switch"""
-        self.pedal(secs, target, hold_from="0", end=("GT", to_kph, TOL),
-                   note=note or "launch %.0f%% to %g" % (100*target, to_kph), hmax=FINE)
+        """driveaway from a (dynamic or static) standstill, split in two: a 3 s
+        fine-step start (brake release, creep-roll, pedal ramp - where the 10 ms
+        runs failed) and the run at the coarse step with the GT end condition.
+        A whole family at 1 ms costs ~1.5 min per simulated second (V3-1)."""
+        nm = note or "launch %.0f%% to %g" % (100*target, to_kph)
+        self.pedal(3, target, hold_from="0", note=nm + " (start, 1 ms)", hmax=FINE)
+        expr = "STEP({%%TIME},0,{THROTTLE_0},0.1,%.4f)" % target
+        self._add(secs, expr, False, 0, ("GT", to_kph, TOL), nm + " (run)", COARSE)
 
     def cruise(self, secs, kph):
         """hold speed with the equilibrium pedal (no controller); 0.5 s blend from the current pedal"""
