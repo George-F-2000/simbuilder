@@ -43,11 +43,12 @@ for tag in ("knee_v2", "champion"):
     rows[tag] = score(p); src[tag] = os.path.basename(os.path.dirname(p))
 
 print("\nHEALED-CAR TOURNAMENT, real motor maps in every entrant:")
-hdr = f"{'entrant':10s}{'km':>7}{'Wh/km':>8}{'jerkRMS':>9}{'distRMS':>9}{'distPk':>8}{'wakes/min':>10}  source"
+hdr = (f"{'entrant':10s}{'km':>7}{'Wh/km':>8}{'Wh/km*':>8}{'jerkRMS':>9}{'distRMS':>9}"
+       f"{'distPk':>8}{'wakes/min':>10}  source   (* = net energy through ONE common loss model)")
 print(hdr); print("-" * len(hdr))
 for tag, s in rows.items():
-    print(f"{tag:10s}{s['km']:7.2f}{s['wh_per_km']:8.1f}{s['jerk_rms']:9.3f}"
-          f"{s['disturb_rms']:9.3f}{s['disturb_peak']:8.2f}{s['eng_per_min']:10.2f}  {src[tag]}")
+    print(f"{tag:10s}{s['km']:7.2f}{s['wh_per_km']:8.1f}{s.get('wh_per_km_common', float('nan')):8.1f}"
+          f"{s['jerk_rms']:9.3f}{s['disturb_rms']:9.3f}{s['disturb_peak']:8.2f}{s['eng_per_min']:10.2f}  {src[tag]}")
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "healed_tournament_realmaps.json")
 json.dump({"rows": rows, "source": src}, open(out, "w"), default=float, indent=2)
 print("saved ->", out)

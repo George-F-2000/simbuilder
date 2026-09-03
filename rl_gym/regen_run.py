@@ -58,6 +58,12 @@ text, _ = re.subn(r'"[^"]*custom_event_tipout_10\.adf"',
                   '"' + (run + "/custom_event_tipout_10.adf").replace("\\", "/") + '"',
                   text)
 open(deck_path, "w", encoding="utf-8").write(text)
+if not fmu:
+    # ME-type stock FMU deadlocks on the damped deck at h_max 0.01 (Bible 30.4)
+    adf_p = os.path.join(run, "custom_event_tipout_10.adf")
+    a = open(adf_p, encoding="utf-8", errors="replace").read()
+    a, _ = re.subn(r"('MANEUVER_\d+'\s+\S+\s+)0\.01(\s+0\.01)", r"\g<1>0.001\g<2>", a)
+    open(adf_p, "w", encoding="utf-8").write(a)
 print(f"{tag}: damping x30 ({nb} fields), fmu swap x{n1}, mode x{n2}", flush=True)
 if n1 != 1 or n2 != 1:
     raise SystemExit(f"{tag}: PATCH COUNTS WRONG")
@@ -73,7 +79,7 @@ t0 = time.time()
 proc = subprocess.Popen([BAT, DECK], cwd=run, env=env,
                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 try:
-    rc = proc.wait(timeout=3*3600)
+    rc = proc.wait(timeout=(8 if not fmu else 3)*3600)   # stock at 1 ms driver step runs 4-6x longer
 except subprocess.TimeoutExpired:
     subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)])
     rc = "KILLED@3h"
