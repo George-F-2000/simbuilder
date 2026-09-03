@@ -14,7 +14,7 @@ while ($quiet -lt 5) {
   if (Get-Process msolve -ErrorAction SilentlyContinue) { $quiet = 0 } else { $quiet++ }
   Start-Sleep -Seconds 60
 }
-Log "solver free for 5 min - starting stage B (tournament rerun on repaired road load)"
+Log "solver free for 5 min - stage A2: champion driveaway family rerun (gentler stops)"
 function Run($label, $args) {
   Log "--- $label"
   try {
@@ -22,6 +22,8 @@ function Run($label, $args) {
     if ($LASTEXITCODE -ne 0) { Log "!!! $label exited $LASTEXITCODE" } else { Log "ok  $label" }
   } catch { Log "!!! $label threw: $_" }
 }
+Run 'A2 champion sweep_driveaway' @((Join-Path $gym 'sweep_run.py'), 'champion', 'sweep_driveaway')
+Log "stage B (tournament rerun on repaired road load)"
 Run 'B1 knee_v2 tip-in'   @((Join-Path $gym 'regen_run.py'), 'knee_v2')
 Run 'B2 champion tip-in'  @((Join-Path $gym 'regen_run.py'), 'champion')
 Run 'B3 stock tip-in'     @((Join-Path $gym 'regen_run.py'), 'stock')
