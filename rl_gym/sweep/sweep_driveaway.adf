@@ -63,6 +63,7 @@ $----------------------------------------------------------------------MANEUVERS
 'MANEUVER_12'     40                   0.01            0.01            
 'MANEUVER_13'     4                    0.01            0.01            
 $--------------------------------------------------------------------------MANEUVER_1
+$ hold
 [MANEUVER_1]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -83,6 +84,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.35
 $--------------------------------------------------------------------------MANEUVER_2
+$ driveaway 20%
 [MANEUVER_2]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -107,6 +109,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_3
+$ brake stop 0.20
 [MANEUVER_3]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -130,6 +133,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.2
 $--------------------------------------------------------------------------MANEUVER_4
+$ hold
 [MANEUVER_4]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -150,6 +154,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.35
 $--------------------------------------------------------------------------MANEUVER_5
+$ driveaway 40%
 [MANEUVER_5]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -174,6 +179,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_6
+$ brake stop 0.20
 [MANEUVER_6]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -197,6 +203,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.2
 $--------------------------------------------------------------------------MANEUVER_7
+$ hold
 [MANEUVER_7]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -217,6 +224,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.35
 $--------------------------------------------------------------------------MANEUVER_8
+$ driveaway 70%
 [MANEUVER_8]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -241,6 +249,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_9
+$ brake stop 0.20
 [MANEUVER_9]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -264,6 +273,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.2
 $-------------------------------------------------------------------------MANEUVER_10
+$ hold
 [MANEUVER_10]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -284,6 +294,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.35
 $-------------------------------------------------------------------------MANEUVER_11
+$ driveaway 100%
 [MANEUVER_11]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -308,6 +319,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_12
+$ brake stop 0.20
 [MANEUVER_12]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -331,6 +343,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.2
 $-------------------------------------------------------------------------MANEUVER_13
+$ hold
 [MANEUVER_13]
 TASK = 'STANDARD'
 (CONTROLLERS)

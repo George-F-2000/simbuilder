@@ -50,18 +50,20 @@ $----------------------------------------------------------------------MANEUVERS
 [MANEUVERS_LIST]
 {name            simulation_time      h_max           print_interval }
 'MANEUVER_1'     5                    0.01            0.01            
-'MANEUVER_2'     25                   0.01            0.01            
-'MANEUVER_3'     20                   0.01            0.01            
-'MANEUVER_4'     15                   0.01            0.01            
-'MANEUVER_5'     20                   0.01            0.01            
-'MANEUVER_6'     15                   0.01            0.01            
-'MANEUVER_7'     6                    0.01            0.01            
-'MANEUVER_8'     12                   0.01            0.01            
+'MANEUVER_2'     30                   0.01            0.01            
+'MANEUVER_3'     15                   0.01            0.01            
+'MANEUVER_4'     25                   0.01            0.01            
+'MANEUVER_5'     15                   0.01            0.01            
+'MANEUVER_6'     20                   0.01            0.01            
+'MANEUVER_7'     15                   0.01            0.01            
+'MANEUVER_8'     6                    0.01            0.01            
 'MANEUVER_9'     8                    0.01            0.01            
-'MANEUVER_10'     20                   0.01            0.01            
-'MANEUVER_11'     6                    0.01            0.01            
-'MANEUVER_12'     8                    0.01            0.01            
+'MANEUVER_10'     25                   0.01            0.01            
+'MANEUVER_11'     15                   0.01            0.01            
+'MANEUVER_12'     6                    0.01            0.01            
+'MANEUVER_13'     6                    0.01            0.01            
 $--------------------------------------------------------------------------MANEUVER_1
+$ hold
 [MANEUVER_1]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -82,28 +84,32 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0.35
 $--------------------------------------------------------------------------MANEUVER_2
+$ launch 35% to 30
 [MANEUVER_2]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_2            NONE                     
- BRAKE                     PID_TRACTION_2            NONE                     
+ THROTTLE                  OL_THROTTLE_2             NONE                     
+ BRAKE                     OL_BRAKE_2                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$----------------------------------------------------------------------PID_TRACTION_2
-[PID_TRACTION_2]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_2'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$----------------------------------------------------------------------DEMAND_SPEED_2
-[DEMAND_SPEED_2]
-TYPE  = 'CONSTANT'
-VALUE = 8333.3
+(END_CONDITIONS) 
+{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
+ LONG_VEL   0          Y          GT         8333.333   277.778    0.001     
+$-----------------------------------------------------------------------OL_THROTTLE_2
+[OL_THROTTLE_2]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,0,1.3,0.3500)'
+SIGNAL_CHANNEL         = 0
+$--------------------------------------------------------------------------OL_BRAKE_2
+[OL_BRAKE_2]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_3
+$ cruise 30 km/h at p_eq 21.8%
 [MANEUVER_3]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -113,14 +119,11 @@ TASK = 'STANDARD'
  BRAKE                     OL_BRAKE_3                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-(END_CONDITIONS) 
-{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         13888.889  694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_3
 [OL_THROTTLE_3]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.5000)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2175)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_3
 [OL_BRAKE_3]
@@ -128,28 +131,32 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_4
+$ tip-in 50% at 30
 [MANEUVER_4]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_4            NONE                     
- BRAKE                     PID_TRACTION_4            NONE                     
+ THROTTLE                  OL_THROTTLE_4             NONE                     
+ BRAKE                     OL_BRAKE_4                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$----------------------------------------------------------------------PID_TRACTION_4
-[PID_TRACTION_4]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_4'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$----------------------------------------------------------------------DEMAND_SPEED_4
-[DEMAND_SPEED_4]
-TYPE  = 'CONSTANT'
-VALUE = 13888.9
+(END_CONDITIONS) 
+{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
+ LONG_VEL   0          Y          GT         13888.889  416.667    0.001     
+$-----------------------------------------------------------------------OL_THROTTLE_4
+[OL_THROTTLE_4]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.5000)'
+SIGNAL_CHANNEL         = 0
+$--------------------------------------------------------------------------OL_BRAKE_4
+[OL_BRAKE_4]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_5
+$ cruise 50 km/h at p_eq 29.6%
 [MANEUVER_5]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -159,14 +166,11 @@ TASK = 'STANDARD'
  BRAKE                     OL_BRAKE_5                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-(END_CONDITIONS) 
-{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          GT         22222.222  694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_5
 [OL_THROTTLE_5]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,1.0000)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2962)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_5
 [OL_BRAKE_5]
@@ -174,28 +178,32 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_6
+$ tip-in 100% at 50
 [MANEUVER_6]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_6            NONE                     
- BRAKE                     PID_TRACTION_6            NONE                     
+ THROTTLE                  OL_THROTTLE_6             NONE                     
+ BRAKE                     OL_BRAKE_6                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$----------------------------------------------------------------------PID_TRACTION_6
-[PID_TRACTION_6]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_6'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$----------------------------------------------------------------------DEMAND_SPEED_6
-[DEMAND_SPEED_6]
-TYPE  = 'CONSTANT'
-VALUE = 22222.2
+(END_CONDITIONS) 
+{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
+ LONG_VEL   0          Y          GT         22222.222  416.667    0.001     
+$-----------------------------------------------------------------------OL_THROTTLE_6
+[OL_THROTTLE_6]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,1.0000)'
+SIGNAL_CHANNEL         = 0
+$--------------------------------------------------------------------------OL_BRAKE_6
+[OL_BRAKE_6]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_7
+$ cruise 80 km/h at p_eq 42.0%
 [MANEUVER_7]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -209,7 +217,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_7]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.0000)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4205)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_7
 [OL_BRAKE_7]
@@ -217,28 +225,29 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_8
+$ lift-off at 80
 [MANEUVER_8]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_8            NONE                     
- BRAKE                     PID_TRACTION_8            NONE                     
+ THROTTLE                  OL_THROTTLE_8             NONE                     
+ BRAKE                     OL_BRAKE_8                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$----------------------------------------------------------------------PID_TRACTION_8
-[PID_TRACTION_8]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_8'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$----------------------------------------------------------------------DEMAND_SPEED_8
-[DEMAND_SPEED_8]
-TYPE  = 'CONSTANT'
-VALUE = 22222.2
+$-----------------------------------------------------------------------OL_THROTTLE_8
+[OL_THROTTLE_8]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.0000)'
+SIGNAL_CHANNEL         = 0
+$--------------------------------------------------------------------------OL_BRAKE_8
+[OL_BRAKE_8]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_9
+$ small tip-in 35% from the lift
 [MANEUVER_9]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -252,7 +261,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_9]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.2500)'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.3500)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_9
 [OL_BRAKE_9]
@@ -260,28 +269,32 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_10
+$ tip-in 70% to 100
 [MANEUVER_10]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_10            NONE                     
- BRAKE                     PID_TRACTION_10            NONE                     
+ THROTTLE                  OL_THROTTLE_10             NONE                     
+ BRAKE                     OL_BRAKE_10                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$---------------------------------------------------------------------PID_TRACTION_10
-[PID_TRACTION_10]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_10'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$---------------------------------------------------------------------DEMAND_SPEED_10
-[DEMAND_SPEED_10]
-TYPE  = 'CONSTANT'
-VALUE = 27777.8
+(END_CONDITIONS) 
+{SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
+ LONG_VEL   0          Y          GT         27777.778  416.667    0.001     
+$----------------------------------------------------------------------OL_THROTTLE_10
+[OL_THROTTLE_10]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.7000)'
+SIGNAL_CHANNEL         = 0
+$-------------------------------------------------------------------------OL_BRAKE_10
+[OL_BRAKE_10]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_11
+$ cruise 100 km/h at p_eq 50.4%
 [MANEUVER_11]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -295,7 +308,7 @@ $----------------------------------------------------------------------OL_THROTT
 [OL_THROTTLE_11]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.0000)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.5039)'
 SIGNAL_CHANNEL         = 0
 $-------------------------------------------------------------------------OL_BRAKE_11
 [OL_BRAKE_11]
@@ -303,27 +316,49 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_12
+$ lift-off at 100
 [MANEUVER_12]
 TASK = 'STANDARD'
 (CONTROLLERS)
 {DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
  STEER                     OL_STEER                  NONE                     
- THROTTLE                  PID_TRACTION_12            NONE                     
- BRAKE                     PID_TRACTION_12            NONE                     
+ THROTTLE                  OL_THROTTLE_12             NONE                     
+ BRAKE                     OL_BRAKE_12                NONE                     
  GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
-$---------------------------------------------------------------------PID_TRACTION_12
-[PID_TRACTION_12]
-TAG                    = 'PID'
-TYPE                   = 'FOLLOW_VELOCITY'
-DEMAND_SIGNAL          = 'DEMAND_SPEED_12'
-KP                     = 0.3
-KI                     = 0.05
-KD                     = 0
-$---------------------------------------------------------------------DEMAND_SPEED_12
-[DEMAND_SPEED_12]
-TYPE  = 'CONSTANT'
-VALUE = 27777.8
+$----------------------------------------------------------------------OL_THROTTLE_12
+[OL_THROTTLE_12]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},1,{THROTTLE_0},1.3,0.0000)'
+SIGNAL_CHANNEL         = 0
+$-------------------------------------------------------------------------OL_BRAKE_12
+[OL_BRAKE_12]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
+$-------------------------------------------------------------------------MANEUVER_13
+$ cruise 100 km/h at p_eq 50.4%
+[MANEUVER_13]
+TASK = 'STANDARD'
+(CONTROLLERS)
+{DRIVER_SIGNAL             PRIMARY_CONTROLLER        ADDITIONAL_CONTROLLER    }
+ STEER                     OL_STEER                  NONE                     
+ THROTTLE                  OL_THROTTLE_13             NONE                     
+ BRAKE                     OL_BRAKE_13                NONE                     
+ GEAR                      GEAR_CLUTCH_CONTROL       NONE                     
+ CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
+$----------------------------------------------------------------------OL_THROTTLE_13
+[OL_THROTTLE_13]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'EXPRESSION'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.5039)'
+SIGNAL_CHANNEL         = 0
+$-------------------------------------------------------------------------OL_BRAKE_13
+[OL_BRAKE_13]
+TAG                    = 'OPENLOOP'
+TYPE                   = 'CONSTANT'
+VALUE                  = 0
 $-----------------------------------------------------------------------------OL_STEER
 [OL_STEER]
 TAG                    = 'OPENLOOP'
