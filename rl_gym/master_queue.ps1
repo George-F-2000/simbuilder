@@ -23,6 +23,8 @@ function Run($label, $args) {
   } catch { Log "!!! $label threw: $_" }
 }
 Run 'A2 champion sweep_driveaway' @((Join-Path $gym 'sweep_run.py'), 'champion', 'sweep_driveaway')
+Run 'A3 champion sweep_tipin_ladder' @((Join-Path $gym 'sweep_run.py'), 'champion', 'sweep_tipin_ladder')
+Run 'A4 champion sweep_coast_brake' @((Join-Path $gym 'sweep_run.py'), 'champion', 'sweep_coast_brake')
 Log "stage B (tournament rerun on repaired road load)"
 Run 'B1 knee_v2 tip-in'   @((Join-Path $gym 'regen_run.py'), 'knee_v2')
 Run 'B2 champion tip-in'  @((Join-Path $gym 'regen_run.py'), 'champion')
