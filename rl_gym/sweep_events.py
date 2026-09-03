@@ -115,12 +115,15 @@ def build():
     os.makedirs(OUT, exist_ok=True)
     ev = []
     # 1) driveaway family: 20 / 40 / 70 / 100 % from brake-held standstill
+    # brake fraction ~ decel/g on this deck (0.5 gave -5.2 m/s2, a locked-wheel
+    # stop that left the body rocking at +/-4.5 m/s2 into the next launch and
+    # killed the run - 2026-09-02). Driveaway-family stops are gentle: 0.2.
     d = Event("sweep_driveaway")
     d.hold(5, 0.35)
-    for ped, target in ((0.20, 20), (0.40, 30), (0.70, 40), (1.00, 50)):
+    for ped, target in ((0.20, 15), (0.40, 30), (0.70, 40), (1.00, 50)):
         d.pedal(45, ped, hold_from="0", end=("GT", target, 1.0))
-        d.stop(40, 0.5)
-        d.hold(3, 0.5)
+        d.stop(40, 0.2)
+        d.hold(4, 0.35)
     ev.append(d)
     # 2) tip-in / tip-out ladder around closed-loop cruise holds
     l = Event("sweep_tipin_ladder")
@@ -143,11 +146,11 @@ def build():
     c.cruise(40, 100)
     c.pedal(150, 0.00, end=("LT", 5, 1.0))   # lift at 100 -> regen coast to 5 km/h
     c.cruise(25, 80)
-    c.stop(40, 0.3)                          # moderate stop from 80
-    c.hold(3, 0.3)
+    c.stop(40, 0.2)                          # moderate stop from 80 (~2 m/s2)
+    c.hold(4, 0.35)
     c.cruise(20, 50)
-    c.stop(30, 0.6)                          # firm stop from 50
-    c.hold(3, 0.6)
+    c.stop(30, 0.4)                          # firm stop from 50 (~4 m/s2)
+    c.hold(4, 0.35)
     ev.append(c)
     for e in ev:
         p = os.path.join(OUT, e.name + ".adf")
