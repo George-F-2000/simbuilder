@@ -109,7 +109,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_3
-$ cruise 30 km/h at p_eq 22.9%
+$ cruise 30 km/h at p_eq 21.8%
 [MANEUVER_3]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -123,7 +123,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_3]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2291)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2175)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_3
 [OL_BRAKE_3]
@@ -156,7 +156,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_5
-$ cruise 50 km/h at p_eq 27.9%
+$ cruise 50 km/h at p_eq 29.6%
 [MANEUVER_5]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -170,7 +170,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_5]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2786)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.2962)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_5
 [OL_BRAKE_5]
@@ -203,7 +203,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_7
-$ cruise 80 km/h at p_eq 35.5%
+$ cruise 80 km/h at p_eq 42.0%
 [MANEUVER_7]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -217,7 +217,7 @@ $-----------------------------------------------------------------------OL_THROT
 [OL_THROTTLE_7]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.3553)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4205)'
 SIGNAL_CHANNEL         = 0
 $--------------------------------------------------------------------------OL_BRAKE_7
 [OL_BRAKE_7]
@@ -294,7 +294,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_11
-$ cruise 100 km/h at p_eq 40.8%
+$ cruise 100 km/h at p_eq 50.4%
 [MANEUVER_11]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -308,7 +308,7 @@ $----------------------------------------------------------------------OL_THROTT
 [OL_THROTTLE_11]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4079)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.5039)'
 SIGNAL_CHANNEL         = 0
 $-------------------------------------------------------------------------OL_BRAKE_11
 [OL_BRAKE_11]
@@ -338,7 +338,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_13
-$ cruise 100 km/h at p_eq 40.8%
+$ cruise 100 km/h at p_eq 50.4%
 [MANEUVER_13]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -352,7 +352,7 @@ $----------------------------------------------------------------------OL_THROTT
 [OL_THROTTLE_13]
 TAG                    = 'OPENLOOP'
 TYPE                   = 'EXPRESSION'
-EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.4079)'
+EXPRESSION             = 'STEP({%TIME},0,{THROTTLE_0},0.5,0.5039)'
 SIGNAL_CHANNEL         = 0
 $-------------------------------------------------------------------------OL_BRAKE_13
 [OL_BRAKE_13]
