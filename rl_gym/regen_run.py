@@ -21,6 +21,7 @@ import time
 # pipeline-app converter: reconstructs BattSOC for the real pack from the
 # BattPower integral (the stock FMU's pack size and SOC start are compiled in)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 SRC = DATA_ROOT + "/avl_regenoff_runs/AVLlit_tipin_50pct_20260726_075106"
 DECK = "AVLlit_tipin_50pct.xml"
@@ -46,6 +47,10 @@ text = open(deck_path, encoding="utf-8", errors="replace").read()
 text, nb = re.subn(r'(ct[xyz]\s+=\s+")([\d.]+)"',
                    lambda m: m.group(1) + str(float(m.group(2))*30.0) + '"',
                    text)
+# plant repairs toward physical values (Bible 30.21: springs / ride height)
+from plant_repairs import apply_all as _apply_repairs
+text, _nrep = _apply_repairs(text)
+print('plant repairs: springs front x%d rear x%d' % (_nrep['front'], _nrep['rear']), flush=True)
 # (deck-level regen limiter withdrawn - it breaks the DAE in the brake-held
 #  standstill in every formulation tried; the protection lives in the learned
 #  FMUs now, Bible 30.19b/c)
