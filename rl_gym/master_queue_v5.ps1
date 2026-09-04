@@ -19,6 +19,7 @@ while ($quiet -lt 3) {
   Start-Sleep -Seconds 60
 }
 $events = 'sweep_driveaway_20','sweep_driveaway_40','sweep_driveaway_70','sweep_driveaway_100','sweep_coast','sweep_brake'
+Run 'V5 champion sweep_tipin_ladder' @((Join-Path $gym 'sweep_run.py'), 'champion', 'sweep_tipin_ladder')
 foreach ($ev in $events) { Run "V5 champion $ev" @((Join-Path $gym 'sweep_run.py'), 'champion', $ev) }
 Run 'V5 knee_v2 sweep_tipin_ladder' @((Join-Path $gym 'sweep_run.py'), 'knee_v2', 'sweep_tipin_ladder')
 foreach ($ev in $events) { Run "V5 knee_v2 $ev" @((Join-Path $gym 'sweep_run.py'), 'knee_v2', $ev) }
