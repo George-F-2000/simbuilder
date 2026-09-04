@@ -21,4 +21,6 @@ while ($quiet -lt 6) {
 foreach ($ev in 'sweep_tipin_ladder','sweep_driveaway_20','sweep_driveaway_40','sweep_driveaway_70','sweep_driveaway_100','sweep_coast','sweep_brake') {
   Run "V6 champion $ev" @((Join-Path $gym 'sweep_run.py'), 'champion', $ev)
 }
+# knee coast on the 22.5 km/h coast end (its first pass relaunched from 3 km/h)
+Run 'V6 knee_v2 sweep_coast' @((Join-Path $gym 'sweep_run.py'), 'knee_v2', 'sweep_coast')
 Log "QUEUE V6 COMPLETE"
