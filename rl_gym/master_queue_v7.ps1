@@ -18,8 +18,7 @@ while ($quiet -lt 6) {
   if (Get-Process msolve -ErrorAction SilentlyContinue) { $quiet = 0 } else { $quiet++ }
   Start-Sleep -Seconds 60
 }
-# champion coast already run as the limiter validation (smooth form)
-foreach ($ev in 'sweep_tipin_ladder','sweep_brake') { Run "V7 champion $ev" @((Join-Path $gym 'sweep_run.py'), 'champion', $ev) }
+foreach ($ev in 'sweep_coast','sweep_tipin_ladder','sweep_brake') { Run "V7 champion $ev" @((Join-Path $gym 'sweep_run.py'), 'champion', $ev) }
 foreach ($ev in 'sweep_coast','sweep_tipin_ladder','sweep_brake') { Run "V7 knee_v2 $ev" @((Join-Path $gym 'sweep_run.py'), 'knee_v2', $ev) }
 foreach ($ev in 'sweep_coast','sweep_tipin_ladder','sweep_brake') { Run "V7 stock $ev" @((Join-Path $gym 'sweep_run.py'), 'stock', $ev) }
 foreach ($ent in 'champion','knee_v2','stock') { Run "V7 $ent tip-in (tournament control)" @((Join-Path $gym 'regen_run.py'), $ent) }
