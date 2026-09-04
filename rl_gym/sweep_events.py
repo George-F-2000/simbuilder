@@ -154,7 +154,7 @@ def build():
         d = Event("sweep_driveaway_%d" % round(100*ped))
         d.hold(5, 0.35)
         d.launch(45, ped, target, note="driveaway %.0f%%" % (100*ped))
-        d.pedal(4, 0.00, note="lift after the launch")
+        d.pedal(2, 0.00, note="short lift after the launch (2 s - stay clear of standstill)")
         ev.append(d)
     # 2) tip-in / tip-out ladder around equilibrium-pedal cruises (v2 = valid
     #    for all three entrants; kept identical except the tolerance band)
@@ -182,7 +182,11 @@ def build():
     c.hold(5, 0.35)
     c.launch(40, 0.70, 100, note="launch 70% to 100")
     c.cruise(10, 100)
-    c.pedal(150, 0.00, end=("LT", 6, TOL), note="lift at 100, regen coast to ~6 km/h", hmax=FINE)
+    # coast ends at 12.5 km/h (LT fires at value - tol): below ~4 km/h the car is
+    # still decelerating at -3.5 m/s2 with the motor torque already positive (an
+    # extra braking path near standstill - ESP/driveline?) and a learned run that
+    # crosses zero speed with creep active fails the integrator (2026-09-03 23:11)
+    c.pedal(150, 0.00, end=("LT", 15, TOL), note="lift at 100, regen coast to ~12 km/h", hmax=FINE)
     c.launch(30, 0.50, 80, note="accelerate 50% to 80 from the coast")
     c.cruise(8, 80)
     c.stop(40, 0.2)
