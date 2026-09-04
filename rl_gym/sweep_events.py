@@ -146,15 +146,16 @@ def build():
     T = open(TEMPLATE, encoding="utf-8", errors="replace").read()
     os.makedirs(OUT, exist_ok=True)
     ev = []
-    # 1) driveaway family: 20 / 40 / 70 / 100 % from brake-held standstill,
-    #    gentle 0.2 stops, hold at the same 0.2 (no brake step at zero speed)
-    d = Event("sweep_driveaway")
-    d.hold(5, 0.35)
-    for ped, target in ((0.20, 15), (0.40, 30), (0.70, 40), (1.00, 50)):
+    # 1) driveaway family as FOUR separate static-start events. A learned FMU
+    #    at a DYNAMIC standstill under brake fails the integrator (its creep
+    #    floor pushes against the brake at zero tyre speed - stock has no
+    #    creep and survives the same stop/hold); the static start is proven.
+    for ped, target in ((0.20, 12), (0.40, 30), (0.70, 40), (1.00, 50)):
+        d = Event("sweep_driveaway_%d" % round(100*ped))
+        d.hold(5, 0.35)
         d.launch(45, ped, target, note="driveaway %.0f%%" % (100*ped))
-        d.stop(40, 0.2)
-        d.hold(4, 0.2)
-    ev.append(d)
+        d.pedal(4, 0.00, note="lift after the launch")
+        ev.append(d)
     # 2) tip-in / tip-out ladder around equilibrium-pedal cruises (v2 = valid
     #    for all three entrants; kept identical except the tolerance band)
     l = Event("sweep_tipin_ladder")
@@ -172,8 +173,10 @@ def build():
     l.pedal(6, 0.00, note="lift-off at 100")
     l.cruise(6, 100)
     ev.append(l)
-    # 3) coast-down and braking stops
-    c = Event("sweep_coast_brake")
+    # 3) coast-down: static start, lift at 100, re-accelerate from the coast,
+    #    moderate stop ends the event in the 0.5-3.5 km/h band (no hold at a
+    #    dynamic standstill - see 1)
+    c = Event("sweep_coast")
     c.hold(5, 0.35)
     c.launch(40, 0.70, 100, note="launch 70% to 100")
     c.cruise(10, 100)
@@ -181,12 +184,14 @@ def build():
     c.launch(30, 0.50, 80, note="accelerate 50% to 80 from the coast")
     c.cruise(8, 80)
     c.stop(40, 0.2)
-    c.hold(4, 0.2)
-    c.launch(25, 0.40, 50, note="launch 40% to 50")
-    c.cruise(8, 50)
-    c.stop(30, 0.4)
-    c.hold(4, 0.4)
     ev.append(c)
+    # 4) braking: static start, launch 40% to 50, cruise, firm stop ends the event
+    b = Event("sweep_brake")
+    b.hold(5, 0.35)
+    b.launch(25, 0.40, 50, note="launch 40% to 50")
+    b.cruise(8, 50)
+    b.stop(30, 0.4)
+    ev.append(b)
     for e in ev:
         p = os.path.join(OUT, e.name + ".adf")
         open(p, "w", encoding="utf-8").write(e.render(T))
