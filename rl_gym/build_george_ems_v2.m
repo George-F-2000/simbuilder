@@ -80,6 +80,15 @@ ab('simulink/Math Operations/Add', 'excess', 'Inputs', '+-');
 ab('simulink/Math Operations/Divide', 'r min raw');
 ab('simulink/Discontinuities/Saturation', 'r min', 'UpperLimit','1', 'LowerLimit','0');
 ab('simulink/Math Operations/MinMax', 'r final', 'Function', 'max', 'Inputs', '2');
+% symmetric delivery guarantee (Bible 30.16): what the REAR cannot carry
+% goes back to the front: r_max = 1 - sat((|T|-envR)/max(|T|,1)),
+% r_capped = min(r_final, r_max).
+ab('simulink/Math Operations/Add', 'excess R', 'Inputs', '+-');
+ab('simulink/Math Operations/Divide', 'r max raw');
+ab('simulink/Discontinuities/Saturation', 'r max sat', 'UpperLimit','1', 'LowerLimit','0');
+ab('simulink/Sources/Constant', 'one r', 'Value', '1');
+ab('simulink/Math Operations/Add', 'r max', 'Inputs', '+-');
+ab('simulink/Math Operations/MinMax', 'r capped', 'Function', 'min', 'Inputs', '2');
 % ---- split + double-sided envelope clip ----
 ab('simulink/Math Operations/Product', 'T rear raw');
 ab('simulink/Sources/Constant', 'one', 'Value', '1');
@@ -142,8 +151,13 @@ L('abs T/1', 'excess/1');           L('front envelope/1', 'excess/2');
 L('excess/1', 'r min raw/1');       L('abs guard/1', 'r min raw/2');
 L('r min raw/1', 'r min/1');
 L('engage slew/1', 'r final/1');    L('r min/1', 'r final/2');
-L('r final/1', 'T rear raw/1');     L('demand filter 50ms/1', 'T rear raw/2');
-L('one/1', 'one minus r/1');        L('r final/1', 'one minus r/2');
+L('abs T/1', 'excess R/1');         L('rear envelope/1', 'excess R/2');
+L('excess R/1', 'r max raw/1');     L('abs guard/1', 'r max raw/2');
+L('r max raw/1', 'r max sat/1');
+L('one r/1', 'r max/1');            L('r max sat/1', 'r max/2');
+L('r final/1', 'r capped/1');       L('r max/1', 'r capped/2');
+L('r capped/1','T rear raw/1');     L('demand filter 50ms/1', 'T rear raw/2');
+L('one/1', 'one minus r/1');        L('r capped/1','one minus r/2');
 L('one minus r/1', 'T front raw/1'); L('demand filter 50ms/1', 'T front raw/2');
 L('T front raw/1', 'front clip/1'); L('front envelope/1', 'front clip/2');
 L('front clip/1', 'front floor/1'); L('neg env f/1', 'front floor/2');
@@ -172,9 +186,9 @@ L('batt P/1', 'combBattPowerDemand/1');
 L('demand filter 50ms/1', 'combMotorTorqueDemand/1');
 L('zero eff r/1', 'rearMotorEff/1');
 L('zero eff f/1', 'frontMotorEff/1');
-L('r final/1', 'torqueSplitRear/1');
+L('r capped/1','torqueSplitRear/1');
 L('demand filter 50ms/1', 'predCombTorqueDemand/1');
-L('r final/1', 'torqueRatioRear/1');
+L('r capped/1','torqueRatioRear/1');
 L('one minus r/1', 'torqueRatioFront/1');
 
 Simulink.BlockDiagram.arrangeSystem(mdl);
