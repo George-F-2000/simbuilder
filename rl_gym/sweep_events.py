@@ -166,11 +166,13 @@ def build():
     l.cruise(15, 50)
     l.pedal(20, 1.00, end=("GT", 80, TOL), note="tip-in 100% at 50")
     l.cruise(15, 80)
-    l.pedal(6, 0.00, note="lift-off at 80")
-    l.pedal(8, 0.35, note="small tip-in 35% from the lift")
+    # corrected law: lift-off regen is ~-4 m/s2, a 6 s lift from 80 reaches crawl and
+    # the re-tip-in became a launch (failed at 10 ms). Short lift, fine-step tip-in.
+    l.pedal(3, 0.00, note="lift-off at 80 (3 s, to ~45 km/h)")
+    l.pedal(8, 0.35, note="small tip-in 35% from the lift", hmax=FINE)
     l.pedal(25, 0.70, end=("GT", 100, TOL), note="tip-in 70% to 100")
     l.cruise(15, 100)
-    l.pedal(6, 0.00, note="lift-off at 100")
+    l.pedal(4, 0.00, note="lift-off at 100 (4 s)")
     l.cruise(6, 100)
     ev.append(l)
     # 3) coast-down: static start, lift at 100, re-accelerate from the coast,
