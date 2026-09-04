@@ -19,8 +19,14 @@ _REAR_WY = "WY(36503030,34001010,34001010)"
 
 
 def _limiter(torque_expr, own_wy, ref_wy):
-    ratio = "ABS(%s)/(ABS(%s)+0.5)" % (own_wy, ref_wy)
-    return "%s*IF(%s: STEP5(%s, 0.5, 0, 0.9, 1), 1, 1)" % (torque_expr, torque_expr.split("*")[0], ratio)
+    # Smooth form (an IF() on the torque sign made the integrator fail in the
+    # brake-held standstill, 2026-09-04): T_applied = T+ + T- * s(ratio) with
+    # T+ = MAX(T,0), T- = T - MAX(T,0). ratio = (|w_own|+1)/(|w_ref|+1) is ~1
+    # at standstill (no limiting where regen is ~0 anyway) and collapses when
+    # the own axle slows against the other axle at speed.
+    T = torque_expr
+    ratio = "(ABS(%s)+1)/(ABS(%s)+1)" % (own_wy, ref_wy)
+    return "(MAX(%s,0)+(%s-MAX(%s,0))*STEP5(%s, 0.5, 0, 0.9, 1))" % (T, T, T, ratio)
 
 
 def regen_slip_limiter(text):
