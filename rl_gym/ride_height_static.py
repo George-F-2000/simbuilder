@@ -58,6 +58,10 @@ def main():
     text, n1 = re.subn(r'"[^"]*Motor_PSM_dual\.fmu"'.replace("PSM", "PMSM"), '"' + os.path.join(run, os.path.basename(CHAMP)).replace("\\", "/") + '"', text)
     text, n2 = re.subn(r'(id\s+=\s+"-535050562"\s*\n\s*string\s+=\s+")ModelExchange(")', r"\g<1>CoSimulation\g<2>", text)
     text, n3 = re.subn(r'"[^"]*custom_event_tipout_10\.adf"', '"' + (run + "/static_hold.adf").replace("\\", "/") + '"', text)
+    tir = os.environ.get("RH_TIR")
+    if tir:
+        text, ntir = re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20\.tir"', '"' + tir.replace("\\", "/") + '"', text)
+        print(f"{tag}: tyre file override x{ntir} -> {os.path.basename(tir)}", flush=True)
     text, n = apply_springs(text, front_k=fk, front_preload=front, rear_k=rk, rear_preload=rear)
     open(deck_path, "w", encoding="utf-8").write(text)
     print(f"{tag}: damping x30 ({nb}), fmu x{n1}, mode x{n2}, adf x{n3}, preloads front x{n['front']} rear x{n['rear']}", flush=True)
