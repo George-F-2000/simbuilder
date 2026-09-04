@@ -17,7 +17,11 @@ FRONT_LEN, REAR_LEN = "141.06519", "156.4289"   # the deck's coil-spring referen
 # static study 2026-09-04 (ride_height_static.py runs A-C): at rest the wheel centres
 # sit within 6 mm of the design position, both bump stops unloaded, pitch 0.07 deg,
 # tyre loads 7.66 kN front / 5.86 kN rear per wheel (unchanged mass)
-SPRINGS = dict(front_k=174.0, front_preload=17060.0, rear_k=None, rear_preload=5355.0)
+# FRONT ONLY: lifting the rear off its bump stop (rear_preload 5355) makes the brake-held
+# standstill fail (fore-aft rocking on the tyres' carcass stiffness with the ESP FMU
+# pulsing; DASPK stalls at 0.6-1.6 s; more tyre low-speed damping makes it worse).
+# The rear sag (14.5 mm into the bump stop, 47 mm below design) stays a documented defect.
+SPRINGS = dict(front_k=174.0, front_preload=17060.0, rear_k=None, rear_preload=None)
 
 
 def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_preload=None):
