@@ -38,7 +38,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sweep")
 KPH = 1000.0 / 3.6   # mm/s per km/h
 TOL = 2.5            # km/h end-condition band (proven)
 ROAD = (197.0, 0.599, 0.0438)          # repaired road load: N, N/kph, N/kph^2 (Bible 30.10a)
-R_WHEEL, G_FRONT = float(_lc.get("wheel_radius_m", 0.39)), float(_lc.get("gear_front", 18.0))
+R_WHEEL, G_FRONT = float(_lc.get("wheel_radius_m", 0.35)), float(_lc.get("gear_front", 10.0))   # real values live in vehicle_local.json
 FINE, COARSE = 0.001, 0.01
 
 CTRL_OL = ("(CONTROLLERS)\n"

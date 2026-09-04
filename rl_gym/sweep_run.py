@@ -49,6 +49,10 @@ deck_path = os.path.join(run, DECK)
 text = open(deck_path, encoding="utf-8", errors="replace").read()
 text, nb = re.subn(r'(ct[xyz]\s+=\s+")([\d.]+)"',
                    lambda m: m.group(1) + str(float(m.group(2))*30.0) + '"', text)
+from deck_patches import regen_slip_limiter          # Bible 30.19: no regen into a sliding wheel
+text, nr = regen_slip_limiter(text)
+if nr != 2:
+    raise SystemExit("regen slip limiter patched %d of 2 torque variables" % nr)
 n1 = n2 = 1
 if fmu:
     new_fmu = os.path.join(run, os.path.basename(fmu)).replace("\\", "/")
