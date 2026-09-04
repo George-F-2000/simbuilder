@@ -149,7 +149,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_5
-$ lift at 100, regen coast to ~6 km/h
+$ lift at 100, regen coast to ~12 km/h
 [MANEUVER_5]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -161,7 +161,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          LT         1666.667   694.444    0.001     
+ LONG_VEL   0          Y          LT         4166.667   694.444    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_5
 [OL_THROTTLE_5]
 TAG                    = 'OPENLOOP'

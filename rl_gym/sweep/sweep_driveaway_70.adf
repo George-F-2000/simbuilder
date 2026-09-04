@@ -52,7 +52,7 @@ $----------------------------------------------------------------------MANEUVERS
 'MANEUVER_1'     5                    0.001           0.01            
 'MANEUVER_2'     3                    0.001           0.01            
 'MANEUVER_3'     45                   0.01            0.01            
-'MANEUVER_4'     4                    0.01            0.01            
+'MANEUVER_4'     2                    0.01            0.01            
 $--------------------------------------------------------------------------MANEUVER_1
 $ hold (brake 0.35)
 [MANEUVER_1]
@@ -122,7 +122,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_4
-$ lift after the launch
+$ short lift after the launch (2 s - stay clear of standstill)
 [MANEUVER_4]
 TASK = 'STANDARD'
 (CONTROLLERS)
