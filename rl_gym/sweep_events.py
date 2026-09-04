@@ -95,13 +95,13 @@ class Event:
         expr = "STEP({%%TIME},%g,%s,%g,%.4f)" % (delay, hold_from, delay + 0.3, target)
         self._add(secs, expr, False, brake, end, note or "pedal %.0f%%" % (100*target), hmax)
 
-    def launch(self, secs, target, to_kph, note=""):
+    def launch(self, secs, target, to_kph, note="", delay=1.0):
         """driveaway from a (dynamic or static) standstill, split in two: a 3 s
         fine-step start (brake release, creep-roll, pedal ramp - where the 10 ms
         runs failed) and the run at the coarse step with the GT end condition.
         A whole family at 1 ms costs ~1.5 min per simulated second (V3-1)."""
         nm = note or "launch %.0f%% to %g" % (100*target, to_kph)
-        self.pedal(3, target, hold_from="0", note=nm + " (start, 1 ms)", hmax=FINE)
+        self.pedal(3, target, hold_from="0", delay=delay, note=nm + " (start, 1 ms)", hmax=FINE)
         expr = "STEP({%%TIME},0,{THROTTLE_0},0.1,%.4f)" % target
         self._add(secs, expr, False, 0, ("GT", to_kph, TOL), nm + " (run)", COARSE)
 
@@ -190,7 +190,9 @@ def build():
     # Bible 30.17): the 1 s pedal delay of the next start ate 28 km/h and the knee
     # relaunched from 3 km/h with +/-6 m/s2 chatter. End the coast at 22.5 km/h.
     c.pedal(150, 0.00, end=("LT", 25, TOL), note="lift at 100, regen coast to ~22 km/h", hmax=FINE)
-    c.launch(30, 0.50, 80, note="accelerate 50% to 80 from the coast")
+    # relaunch pedal comes in at 0.2 s: with the default 1 s delay the regen decel
+    # (~-3.7 m/s2 mean) took the car from 22.5 to ~5 km/h before the pedal moved
+    c.launch(30, 0.50, 80, note="accelerate 50% to 80 from the coast", delay=0.2)
     c.cruise(8, 80)
     c.stop(40, 0.2)
     ev.append(c)
