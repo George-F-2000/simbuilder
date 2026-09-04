@@ -44,13 +44,13 @@ def main():
     for f in (DECK, "AVLlit_tipin_50pct.nam"):
         shutil.copy(os.path.join(SRC, f), run)
     shutil.copy(CHAMP, run)
-    # 1.5 s brake-held hold at 1 ms, open loop
+    # 4 s brake-held hold at 1 ms, open loop (read at 3.5 s: settled)
     adf = open(os.path.join(HERE, "sweep", "sweep_brake.adf"), encoding="utf-8", errors="replace").read()
     head = adf[:adf.index("[MANEUVERS_LIST]")]
     m1 = re.search(r"\$-+MANEUVER_1\s*\n.*?(?=\$-+MANEUVER_2\s*\n)", adf, re.S).group(0)
     tail = adf[re.search(r"\$-+OL_STEER\s*\n\[OL_STEER\]", adf).start():]
     adf1 = (head + "$" + "-"*70 + "MANEUVERS_LIST\n[MANEUVERS_LIST]\n{name            simulation_time      h_max           print_interval }\n"
-            "'MANEUVER_1'     1.5                  0.001           0.01            \n" + m1 + tail)
+            "'MANEUVER_1'     4.0                  0.001           0.01            \n" + m1 + tail)
     open(os.path.join(run, "static_hold.adf"), "w", encoding="utf-8").write(adf1)
     deck_path = os.path.join(run, DECK)
     text = open(deck_path, encoding="utf-8", errors="replace").read()
@@ -74,14 +74,16 @@ def main():
     rc = subprocess.run([BAT, DECK], cwd=run, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, timeout=1800).returncode
     print(f"{tag}: solver exit {rc} in {(time.time()-t0)/60:.1f} min", flush=True)
     t, data, ids = plt_reader.read_plt(os.path.join(run, "AVLlit_tipin_50pct.plt"))[:3]
-    i = np.searchsorted(t, min(1.2, t[-1]))
+    i = np.searchsorted(t, min(3.5, t[-1]))
     fl_z, fr_z, rl_z, rr_z = data[i, 0, 2], data[i, 2, 2], data[i, 4, 2], data[i, 6, 2]
     fb, rb = np.abs(data[i, 48, :3]).max(), np.abs(data[i, 56, :3]).max()
     fgap, rgap = data[i, 16, 2], data[i, 32, 2]
     print(f"{tag}: t={t[i]:.2f} wheel-centre z vs design [mm] FL {fl_z:.1f} FR {fr_z:.1f} RL {rl_z:.1f} RR {rr_z:.1f} | "
           f"jounce bumper force front {fb:.0f} N rear {rb:.0f} N | bumper disp front {fgap:.1f} rear {rgap:.1f} | "
           f"tyre Fz FL {data[i,123,2]:.0f} RL {data[i,137,2]:.0f} | pitch {data[i,79,0]:.2f} deg", flush=True)
-    print("RESULT", _j.dumps(dict(front=front, rear=rear, front_k=fk, rear_k=rk, fl=float(fl_z), rl=float(rl_z), fb=float(fb), rb=float(rb), fgap=float(fgap), rgap=float(rgap), run=run)), flush=True)
+    fL = float(np.linalg.norm(data[i, 12, :3])); rL = float(np.linalg.norm(data[i, 24, :3]))
+    print(f"{tag}: spring lengths front {fL:.1f} mm rear {rL:.1f} mm (refs 141.07 / 156.43)", flush=True)
+    print("RESULT", _j.dumps(dict(front=front, rear=rear, front_k=fk, rear_k=rk, fl=float(fl_z), rl=float(rl_z), fb=float(fb), rb=float(rb), fgap=float(fgap), rgap=float(rgap), fL=fL, rL=rL, run=run)), flush=True)
 
 
 if __name__ == "__main__":
