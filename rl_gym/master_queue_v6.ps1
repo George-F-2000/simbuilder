@@ -23,4 +23,6 @@ foreach ($ev in 'sweep_tipin_ladder','sweep_driveaway_20','sweep_driveaway_40','
 }
 # knee coast on the 22.5 km/h coast end (its first pass relaunched from 3 km/h)
 Run 'V6 knee_v2 sweep_coast' @((Join-Path $gym 'sweep_run.py'), 'knee_v2', 'sweep_coast')
+# stock coast on the final coast design (0.2 s relaunch delay), for symmetry
+Run 'V6 stock sweep_coast' @((Join-Path $gym 'sweep_run.py'), 'stock', 'sweep_coast')
 Log "QUEUE V6 COMPLETE"
