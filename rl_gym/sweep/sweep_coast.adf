@@ -255,7 +255,7 @@ TASK = 'STANDARD'
  CLUTCH                    GEAR_CLUTCH_CONTROL       NONE                     
 (END_CONDITIONS) 
 {SIGNAL     GROUP      ABS        OPERATOR   VALUE      TOLERANCE  WATCH_TIME}
- LONG_VEL   0          Y          LT         555.556    416.667    0.001     
+ LONG_VEL   0          Y          LT         1111.111   277.778    0.001     
 $-----------------------------------------------------------------------OL_THROTTLE_9
 [OL_THROTTLE_9]
 TAG                    = 'OPENLOOP'

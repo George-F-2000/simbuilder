@@ -112,8 +112,10 @@ class Event:
         self._add(secs, expr, False, 0, None, "cruise %g km/h at p_eq %.1f%%" % (kph, 100*p), COARSE)
 
     def stop(self, secs, brake):
-        """open-loop brake to (near) standstill; fine step; ends in the 0.5-3.5 km/h band"""
-        self._add(secs, "0", True, brake, ("LT", 2.0, 1.5), "brake stop %.2f" % brake, FINE)
+        """open-loop brake stop; fine step; ends at 3 km/h (LT fires at value - tol):
+        below that the learned FMUs' creep floor fights the brake once the slip
+        limiter has removed the regen, and the integrator fails (2026-09-04)"""
+        self._add(secs, "0", True, brake, ("LT", 4.0, 1.0), "brake stop %.2f" % brake, FINE)
 
     def render(self, template):
         head = template[:template.index("[MANEUVERS_LIST]")]
