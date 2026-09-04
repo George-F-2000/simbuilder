@@ -14,7 +14,10 @@ import re
 FRONT_LEN, REAR_LEN = "141.06519", "156.4289"   # the deck's coil-spring reference lengths (front / rear)
 
 # repaired values (None = leave the deck's value); filled in by the static study
-SPRINGS = dict(front_k=None, front_preload=None, rear_k=None, rear_preload=None)
+# static study 2026-09-04 (ride_height_static.py runs A-C): at rest the wheel centres
+# sit within 6 mm of the design position, both bump stops unloaded, pitch 0.07 deg,
+# tyre loads 7.66 kN front / 5.86 kN rear per wheel (unchanged mass)
+SPRINGS = dict(front_k=174.0, front_preload=17060.0, rear_k=None, rear_preload=5355.0)
 
 
 def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_preload=None):
