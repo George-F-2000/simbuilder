@@ -22,6 +22,9 @@ except Exception:
     pass
 ROOT = _lc.get("data_root", "C:/demo_data") + "/healed_runs"
 README = os.path.join(ROOT, "README_AVL_sweep.md")
+# only the final generation (protected learned FMUs, 3 km/h stop ends, queue v7+);
+# earlier stamps are superseded event definitions kept for the record
+GEN_START = "20260904_110000"
 
 
 def row(d):
@@ -30,6 +33,8 @@ def row(d):
     if not m:
         return None
     tag, ev, stamp = m.groups()
+    if stamp < GEN_START:
+        return None
     mf4 = os.path.join(d, "AVLlit_tipin_50pct_avldrive.mf4")
     log = os.path.join(d, "AVLlit_tipin_50pct.log")
     if not (os.path.exists(mf4) and os.path.exists(log)):
