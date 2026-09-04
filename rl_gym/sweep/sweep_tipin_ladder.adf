@@ -57,11 +57,11 @@ $----------------------------------------------------------------------MANEUVERS
 'MANEUVER_6'     15                   0.01            0.01            
 'MANEUVER_7'     20                   0.01            0.01            
 'MANEUVER_8'     15                   0.01            0.01            
-'MANEUVER_9'     6                    0.01            0.01            
-'MANEUVER_10'     8                    0.01            0.01            
+'MANEUVER_9'     3                    0.01            0.01            
+'MANEUVER_10'     8                    0.001           0.01            
 'MANEUVER_11'     25                   0.01            0.01            
 'MANEUVER_12'     15                   0.01            0.01            
-'MANEUVER_13'     6                    0.01            0.01            
+'MANEUVER_13'     4                    0.01            0.01            
 'MANEUVER_14'     6                    0.01            0.01            
 $--------------------------------------------------------------------------MANEUVER_1
 $ hold (brake 0.35)
@@ -248,7 +248,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $--------------------------------------------------------------------------MANEUVER_9
-$ lift-off at 80
+$ lift-off at 80 (3 s, to ~45 km/h)
 [MANEUVER_9]
 TASK = 'STANDARD'
 (CONTROLLERS)
@@ -339,7 +339,7 @@ TAG                    = 'OPENLOOP'
 TYPE                   = 'CONSTANT'
 VALUE                  = 0
 $-------------------------------------------------------------------------MANEUVER_13
-$ lift-off at 100
+$ lift-off at 100 (4 s)
 [MANEUVER_13]
 TASK = 'STANDARD'
 (CONTROLLERS)
