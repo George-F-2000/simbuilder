@@ -80,6 +80,16 @@ ab('simulink/Math Operations/Add', 'excess', 'Inputs', '+-');
 ab('simulink/Math Operations/Divide', 'r min raw');
 ab('simulink/Discontinuities/Saturation', 'r min', 'UpperLimit','1', 'LowerLimit','0');
 ab('simulink/Math Operations/MinMax', 'r final', 'Function', 'max', 'Inputs', '2');
+% symmetric delivery guarantee (Bible 30.16): what the REAR cannot carry
+% goes back to the front: r_max = 1 - sat((|T|-envR)/max(|T|,1)),
+% r_capped = min(r_final, r_max). Never mattered with the generic 380 Nm
+% rear map; with the real 197 Nm SRM map an all-rear split idled the front.
+ab('simulink/Math Operations/Add', 'excess R', 'Inputs', '+-');
+ab('simulink/Math Operations/Divide', 'r max raw');
+ab('simulink/Discontinuities/Saturation', 'r max sat', 'UpperLimit','1', 'LowerLimit','0');
+ab('simulink/Sources/Constant', 'one r', 'Value', '1');
+ab('simulink/Math Operations/Add', 'r max', 'Inputs', '+-');
+ab('simulink/Math Operations/MinMax', 'r capped', 'Function', 'min', 'Inputs', '2');
 % split gate v2: hysteresis (engage >25 Nm, release <5) AND creep rule
 % (front-only below 2 m/s) - no boundary chatter, production-sane
 ab('simulink/Discontinuities/Relay', 'T hyst', 'OnSwitchValue', '25', ...
@@ -158,10 +168,15 @@ L('abs T/1', 'excess/1');           L('front envelope/1', 'excess/2');
 L('excess/1', 'r min raw/1');       L('abs guard/1', 'r min raw/2');
 L('r min raw/1', 'r min/1');
 L('engage slew/1', 'r final/1');    L('r min/1', 'r final/2');
+L('abs T/1', 'excess R/1');         L('rear envelope/1', 'excess R/2');
+L('excess R/1', 'r max raw/1');     L('abs guard/1', 'r max raw/2');
+L('r max raw/1', 'r max sat/1');
+L('one r/1', 'r max/1');            L('r max sat/1', 'r max/2');
+L('r final/1', 'r capped/1');       L('r max/1', 'r capped/2');
 L('abs T/1', 'T hyst/1');
 L('vehicleSpeed/1', 'spd ok/1');    L('spd ok/1', 'spd ok dbl/1');
 L('T hyst/1', 'gate ctl/1');        L('spd ok dbl/1', 'gate ctl/2');
-L('r final/1', 'r gate/1');         L('gate ctl/1', 'r gate/2');
+L('r capped/1','r gate/1');         L('gate ctl/1', 'r gate/2');
 L('zero r/1', 'r gate/3');
 L('r gate/1', 'gate slew/1');
 L('gate slew/1', 'T rear raw/1');      L('demand filter 50ms/1', 'T rear raw/2');
