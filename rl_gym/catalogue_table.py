@@ -47,13 +47,13 @@ def row(d):
     v = np.asarray(mdf.get("VehicleSpeed").samples, float)
     t = np.asarray(mdf.get("VehicleSpeed").timestamps)
     s = score(mf4)
-    return (tag, ev, stamp, man, err, t[-1], v[-1], v.max(), s["wh_per_km"], s["jerk_rms"], s["disturb_peak"])
+    return (tag, ev, stamp, man, err, t[-1], v[-1], v.max(), s["wh_per_km_common"], s["jerk_rms"], s["disturb_peak"])
 
 
 rows = [r for r in (row(d) for d in sorted(glob.glob(ROOT + "/*_sweep_*"))) if r]
 order = {"stock": 0, "knee_v2": 1, "champion": 2}
 rows.sort(key=lambda r: (r[1], order[r[0]], r[2]))
-lines = ["| entrant | event | run | maneuvers | errors | duration s | final km/h | max km/h | Wh/km* | jerk | dist.pk |",
+lines = ["| entrant | event | run | maneuvers | errors | duration s | final km/h | max km/h | Wh/km* (common-loss, net) | jerk | dist.pk |",
          "|---|---|---|---|---|---|---|---|---|---|---|"]
 for r in rows:
     lines.append("| %s | %s | %s | %d | %d | %.1f | %.1f | %.1f | %.0f | %.2f | %.2f |" % r)

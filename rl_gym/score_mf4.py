@@ -69,7 +69,9 @@ def score(path):
     awake = np.abs(tr) > 5.0
     engages = int(np.sum(np.diff(awake.astype(int)) != 0))
     km = float(np.trapezoid(v/3.6, t)/1000.0)
-    wh = float(np.trapezoid(np.abs(pb), t)/3600.0)*(1000.0 if np.abs(pb).max() < 500 else 1.0)
+    # unit heuristic on the 99th percentile, not the max: the stock FMU's launch
+    # jolt can spike BattPower and flip a kW channel to 'W' (2026-09-05)
+    wh = float(np.trapezoid(np.abs(pb), t)/3600.0)*(1000.0 if np.percentile(np.abs(pb), 99) < 500 else 1.0)
     try:
         pc = common_loss_battery_power(m)
         wh_common = float(np.trapezoid(pc, t)/3600.0)          # NET Wh, regen credited
