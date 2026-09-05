@@ -83,14 +83,33 @@ for m in re.finditer(r'"([A-Za-z]:[^"]+?\.dll)"', text, re.IGNORECASE):
     if os.path.isdir(d) and d not in dirs:
         dirs.append(d)
 env["PATH"] = os.pathsep.join(dirs + [env.get("PATH", "")])
+def _watch_and_wait(proc, run_dir, log_name, timeout_s):
+    """wait for the solver; kill early when the log shows an analysis failure
+    (e.g. an Altair licensing 'Host not found') with no time progress - the
+    solver otherwise sits until the hard timeout (v9 knee, 2026-09-05)"""
+    import time as _t
+    t0 = _t.time(); logp = os.path.join(run_dir, log_name)
+    while True:
+        try:
+            return proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            pass
+        if _t.time() - t0 > timeout_s:
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)])
+            return "KILLED@%.0fh" % (timeout_s/3600)
+        try:
+            txt = open(logp, encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        if ("Simulation failed" in txt or "License error" in txt) and "Time=" not in txt and _t.time() - t0 > 180:
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)])
+            return "KILLED@analysis-failure"
+
+
 t0 = time.time()
 proc = subprocess.Popen([BAT, DECK], cwd=run, env=env,
                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-try:
-    rc = proc.wait(timeout=(15 if not fmu else 4)*3600)  # stock at 1 ms driver step: driveaway family needs ~11 h
-except subprocess.TimeoutExpired:
-    subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)])
-    rc = "KILLED@3h"
+rc = _watch_and_wait(proc, run, "AVLlit_tipin_50pct.log", (15 if not fmu else 4)*3600)  # stock at 1 ms driver step: driveaway family needs ~11 h
 print(f"{tag}/{event}: solver exit {rc} in {(time.time()-t0)/60:.1f} min", flush=True)
 
 from converter import convert
