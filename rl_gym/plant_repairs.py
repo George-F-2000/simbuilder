@@ -47,8 +47,40 @@ def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_prel
     return text, n
 
 
+# mass distribution (2026-09-06, George: the real car is ~48/52 front/rear; the deck's
+# Vehicle Body CG marker sits at x 2150 (a template, front-heavy placement) giving
+# 56.7/43.3). Moving the Vehicle Body's CG marker to x 2602.5 puts the whole-vehicle CG
+# at 52% rear (wheelbase 3097.4 from the contact patches, front contact x 995.7); the
+# battery pack (x 2743.7) and the motors (x 1000 / 4000) stay where they are.
+CG_SHIFT = dict(marker_id="30301010", pos_x=None)     # None = off; 2602.5 = 48/52 split
+
+# tyre file override (None = the deck's own file). LYRIQ_PS4SUV_265_50R20_um104.tir =
+# USE_MODE 104 (relaxation off), the standstill recipe of 2026-07-21.
+TIR = None
+
+
+def apply_cg_shift(text, marker_id=None, pos_x=None):
+    """move one CG marker's pos_x (Reference_Marker id=marker_id)"""
+    marker_id = marker_id or CG_SHIFT["marker_id"]; pos_x = CG_SHIFT["pos_x"] if pos_x is None else pos_x
+    if pos_x is None:
+        return text, 0
+    pat = re.compile(r'(<Reference_Marker\s+id\s*=\s*"%s".*?pos_x\s*=\s*")[^"]*(")' % marker_id, re.S)
+    return pat.subn(lambda m: m.group(1) + str(pos_x) + m.group(2), text)
+
+
+def apply_tir(text, tir=None):
+    """repoint the deck's four tyre-file strings"""
+    tir = tir or TIR
+    if not tir:
+        return text, 0
+    return re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20[^"]*\.tir"', '"' + tir.replace("\\", "/") + '"', text)
+
+
 def apply_all(text):
     """every repair with its recorded value; returns (text, counts)"""
+    n = {"front": 0, "rear": 0}
     if any(v is not None for v in SPRINGS.values()):
-        return apply_springs(text, **SPRINGS)
-    return text, {"front": 0, "rear": 0}
+        text, n = apply_springs(text, **SPRINGS)
+    text, n["cg"] = apply_cg_shift(text)
+    text, n["tir"] = apply_tir(text)
+    return text, n

@@ -24,7 +24,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import plt_reader
-from plant_repairs import apply_springs
+from plant_repairs import apply_springs, apply_cg_shift, apply_tir
 
 SRC = DATA_ROOT + "/avl_regenoff_runs/AVLlit_tipin_50pct_20260726_075106"
 DECK = "AVLlit_tipin_50pct.xml"
@@ -63,6 +63,10 @@ def main():
         text, ntir = re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20\.tir"', '"' + tir.replace("\\", "/") + '"', text)
         print(f"{tag}: tyre file override x{ntir} -> {os.path.basename(tir)}", flush=True)
     text, n = apply_springs(text, front_k=fk, front_preload=front, rear_k=rk, rear_preload=rear)
+    cgx = os.environ.get("RH_CG_X")
+    if cgx:
+        text, ncg = apply_cg_shift(text, pos_x=float(cgx))
+        print(f"{tag}: Vehicle Body CG marker pos_x -> {cgx} (x{ncg})", flush=True)
     open(deck_path, "w", encoding="utf-8").write(text)
     print(f"{tag}: damping x30 ({nb}), fmu x{n1}, mode x{n2}, adf x{n3}, preloads front x{n['front']} rear x{n['rear']}", flush=True)
     if n["front"] != 2 or n["rear"] != 2 or n1 != 1 or n3 != 1:
