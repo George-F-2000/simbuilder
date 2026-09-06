@@ -21,7 +21,10 @@ FRONT_LEN, REAR_LEN = "141.06519", "156.4289"   # the deck's coil-spring referen
 # standstill fail (fore-aft rocking on the tyres' carcass stiffness with the ESP FMU
 # pulsing; DASPK stalls at 0.6-1.6 s; more tyre low-speed damping makes it worse).
 # The rear sag (14.5 mm into the bump stop, 47 mm below design) stays a documented defect.
-SPRINGS = dict(front_k=174.0, front_preload=17060.0, rear_k=None, rear_preload=None)
+# 2026-09-06 static study H-J on the 48/52 mass split with the regularised brakes: both
+# axles within 2.2 mm of the design position, pitch 0.01 deg, bump stops clear, tyre loads
+# 6485 N front / 7029 N rear per wheel (48.0 / 52.0).
+SPRINGS = dict(front_k=174.0, front_preload=14100.0, rear_k=None, rear_preload=6810.0)
 
 
 def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_preload=None):
@@ -52,7 +55,7 @@ def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_prel
 # 56.7/43.3). Moving the Vehicle Body's CG marker to x 2602.5 puts the whole-vehicle CG
 # at 52% rear (wheelbase 3097.4 from the contact patches, front contact x 995.7); the
 # battery pack (x 2743.7) and the motors (x 1000 / 4000) stay where they are.
-CG_SHIFT = dict(marker_id="30301010", pos_x=None)     # None = off; 2602.5 = 48/52 split
+CG_SHIFT = dict(marker_id="30301010", pos_x=2602.5)   # 48/52 split (None = off)
 
 # tyre file override (None = the deck's own file). LYRIQ_PS4SUV_265_50R20_um104.tir =
 # USE_MODE 104 (relaxation off), the standstill recipe of 2026-07-21.
@@ -82,7 +85,7 @@ def apply_tir(text, tir=None):
 # a brake-held standstill (the DAE landmine that killed every rear-off-its-bump-stop hold
 # and fed the ESP's pressure pulsing). Widening the band to +/-BRAKE_BAND rad/s makes the
 # brake viscous inside that band and changes nothing above it (0.5 rad/s = 0.7 km/h).
-BRAKE_BAND = None      # None = off; 0.5 = the regularised brake
+BRAKE_BAND = 0.5       # the regularised brake (None = off)
 
 
 def apply_brake_band(text, band=None):
