@@ -25,7 +25,7 @@ README = os.path.join(ROOT, "README_AVL_sweep.md")
 # only the final generation (repaired plant, Bible 30.21: the 15:04 validation and
 # queue v9 onward); earlier stamps are the as-is plant / superseded events, kept
 # for the record as the before-state
-GEN_START = "20260904_150000"
+GEN_START = "20260906_140000"   # 2026-09-06: mass split 48/52, both axles at design height, regularised brakes
 
 
 def row(d):
