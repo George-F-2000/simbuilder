@@ -24,7 +24,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import plt_reader
-from plant_repairs import apply_springs, apply_cg_shift, apply_tir
+from plant_repairs import apply_springs, apply_cg_shift, apply_tir, apply_brake_band
 
 SRC = DATA_ROOT + "/avl_regenoff_runs/AVLlit_tipin_50pct_20260726_075106"
 DECK = "AVLlit_tipin_50pct.xml"
@@ -63,6 +63,10 @@ def main():
         text, ntir = re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20\.tir"', '"' + tir.replace("\\", "/") + '"', text)
         print(f"{tag}: tyre file override x{ntir} -> {os.path.basename(tir)}", flush=True)
     text, n = apply_springs(text, front_k=fk, front_preload=front, rear_k=rk, rear_preload=rear)
+    bb = os.environ.get("RH_BRAKE_BAND")
+    if bb:
+        text, nbb = apply_brake_band(text, float(bb))
+        print(f"{tag}: brake sign band -> +/-{bb} rad/s (x{nbb})", flush=True)
     cgx = os.environ.get("RH_CG_X")
     if cgx:
         text, ncg = apply_cg_shift(text, pos_x=float(cgx))
@@ -79,7 +83,12 @@ def main():
             dirs.append(d)
     env["PATH"] = os.pathsep.join(dirs + [env.get("PATH", "")])
     t0 = time.time()
-    rc = subprocess.run([BAT, DECK], cwd=run, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, timeout=1800).returncode
+    # a 4 s hold that has not finished in 20 min is crawling toward a failure (G: 168 min) - kill it
+    try:
+        rc = subprocess.run([BAT, DECK], cwd=run, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, timeout=int(os.environ.get("RH_TIMEOUT", "1200"))).returncode
+    except subprocess.TimeoutExpired:
+        subprocess.run(["taskkill", "/F", "/IM", "msolve.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        rc = "KILLED@crawl"
     print(f"{tag}: solver exit {rc} in {(time.time()-t0)/60:.1f} min", flush=True)
     t, data, ids = plt_reader.read_plt(os.path.join(run, "AVLlit_tipin_50pct.plt"))[:3]
     i = np.searchsorted(t, min(3.5, t[-1]))

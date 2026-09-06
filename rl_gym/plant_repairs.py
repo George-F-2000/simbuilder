@@ -76,6 +76,23 @@ def apply_tir(text, tir=None):
     return re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20[^"]*\.tir"', '"' + tir.replace("\\", "/") + '"', text)
 
 
+# brake friction regularisation (2026-09-06): the four wheel brakes are Coulomb brakes,
+# torque = -STEP5(wheel omega, -0.001, -1, 0.001, 1) x pressure x area x mu x radius. The
+# +/-0.001 rad/s sign band flips the full brake torque with the slightest wheel wiggle in
+# a brake-held standstill (the DAE landmine that killed every rear-off-its-bump-stop hold
+# and fed the ESP's pressure pulsing). Widening the band to +/-BRAKE_BAND rad/s makes the
+# brake viscous inside that band and changes nothing above it (0.5 rad/s = 0.7 km/h).
+BRAKE_BAND = None      # None = off; 0.5 = the regularised brake
+
+
+def apply_brake_band(text, band=None):
+    band = BRAKE_BAND if band is None else band
+    if band is None:
+        return text, 0
+    pat = re.compile(r'(-STEP5\(WZ\(\d+,\d+,\d+\),)-0\.001,-1,0\.001,1(\)\*VARVAL\(3630\d{4}\))')
+    return pat.subn(lambda m: "%s-%g,-1,%g,1%s" % (m.group(1), band, band, m.group(2)), text)
+
+
 def apply_all(text):
     """every repair with its recorded value; returns (text, counts)"""
     n = {"front": 0, "rear": 0}
@@ -83,4 +100,5 @@ def apply_all(text):
         text, n = apply_springs(text, **SPRINGS)
     text, n["cg"] = apply_cg_shift(text)
     text, n["tir"] = apply_tir(text)
+    text, n["brake"] = apply_brake_band(text)
     return text, n
