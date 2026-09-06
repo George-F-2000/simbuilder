@@ -64,7 +64,7 @@ def apply_cg_shift(text, marker_id=None, pos_x=None):
     marker_id = marker_id or CG_SHIFT["marker_id"]; pos_x = CG_SHIFT["pos_x"] if pos_x is None else pos_x
     if pos_x is None:
         return text, 0
-    pat = re.compile(r'(<Reference_Marker\s+id\s*=\s*"%s".*?pos_x\s*=\s*")[^"]*(")' % marker_id, re.S)
+    pat = re.compile(r'(<Reference_Marker\s+id\s*=\s*"' + str(marker_id) + r'".*?pos_x\s*=\s*")[^"]*(")', re.S)
     return pat.subn(lambda m: m.group(1) + str(pos_x) + m.group(2), text)
 
 
