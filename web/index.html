@@ -666,14 +666,15 @@
       <h2>Live telemetry
         <span class="hint">watch the solver stream channels as it runs — like a logger in the car</span></h2>
       <div id="liveStatus" class="live-status">
-        Idle — start a run, or scan for one already solving (even one this app
-        didn't launch). You'll watch the solver advance live; the channel curves
-        fill in when it finishes.
+        Idle — start a run, or scan. Runs are found by <b>process</b>: any
+        MotionSolve solving on this machine shows up here with its folder,
+        progress, speed and RAM — whoever launched it. The channel curves fill
+        in when it finishes.
       </div>
       <div class="live-scan">
-        <button id="liveScanBtn" class="ghost">↻ Scan for runs</button>
+        <button id="liveScanBtn" class="ghost">↻ Scan processes &amp; folders</button>
         <button id="liveAddFolderBtn" class="ghost">+ Add folder to scan</button>
-        <span id="liveScanNote" class="hint">scan to find live &amp; recent runs</span>
+        <span id="liveScanNote" class="hint">live solvers by process, recent runs by folder</span>
       </div>
       <div id="liveRunList" class="live-run-list"></div>
       <div class="live-vitals" id="liveVitals">

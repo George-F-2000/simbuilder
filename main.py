@@ -191,21 +191,44 @@ class Api:
         return [r for r in roots if r]
 
     def scan_runs(self):
-        """List MotionSolve runs (live + recent) found under the scan roots."""
+        """List MotionSolve runs: every live solver PROCESS on this machine
+        first (wherever its folder is - a script, a second SimBuilder,
+        MotionView), then folders seen solving earlier this session, then the
+        folder walk under the scan roots."""
         try:
             import live_tail
-            return {"ok": True, "runs": live_tail.scan_runs(self._scan_roots()),
-                    "solver_running": live_tail.solver_running(),
-                    "roots": self._scan_roots()}
+            remembered = list(getattr(self, "_proc_dirs", {}).keys())
+            runs, live_dirs = live_tail.scan_all(self._scan_roots(), remembered)
+            if not hasattr(self, "_proc_dirs"):
+                self._proc_dirs = {}
+            for d in live_dirs:
+                self._proc_dirs[d] = time.time()
+            return {"ok": True, "runs": runs,
+                    "solver_running": bool(live_dirs),
+                    "n_procs": len(live_dirs), "roots": self._scan_roots()}
         except Exception as exc:
             return {"ok": False, "error": str(exc), "runs": []}
 
-    def attach_run(self, run_dir):
-        """Attach the Live tab to an external run folder the user picked."""
+    def attach_run(self, run_dir, started=None):
+        """Attach the Live tab to an external run folder the user picked.
+        `started` (epoch seconds, from a process sighting) makes the wall
+        clock count from the solver's launch rather than from the click."""
         if not run_dir or not os.path.isdir(run_dir):
             return {"ok": False, "error": "not a folder"}
-        self._attach(lambda d=run_dir: d, external=True)
+        t0 = float(started) if started else None
+        self._attach(lambda d=run_dir: d, external=True, t0=t0)
         return {"ok": True, "dir": run_dir}
+
+    def stop_pid(self, pid, pids=None):
+        """Kill a solver found by process (its whole launcher chain). Used by
+        the Live tab's Stop button on runs this app did not launch."""
+        try:
+            import live_procs
+            ok = live_procs.kill_tree(int(pid), [int(p) for p in (pids or [])],
+                                      log=self._log)
+            return {"ok": bool(ok)}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
 
     def add_scan_folder(self):
         """Let the user add a folder to scan for runs (persisted in settings)."""

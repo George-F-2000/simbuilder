@@ -314,44 +314,118 @@
     return Math.round(s / 3600) + "h ago";
   }
 
+  function fmtDur(s) {
+    if (s == null) return "—";
+    if (s < 90) return Math.round(s) + "s";
+    if (s < 5400) return Math.round(s / 60) + "m";
+    return (s / 3600).toFixed(1) + "h";
+  }
+
+  // runs found by PROCESS: the solver's pid, sim time vs the run's total,
+  // speed vs real time, ETA, RAM - the things you'd otherwise open Task
+  // Manager and the log for. Folder-found runs keep the old short line.
+  function procMeta(r) {
+    var m = "LIVE &middot; pid " + r.pid;
+    if (r.sim_last != null) {
+      m += " &middot; t=" + r.sim_last + (r.sim_total ? "/" + r.sim_total : "") + "s";
+      if (r.frac != null) m += " (" + Math.round(r.frac * 100) + "%)";
+    }
+    if (r.rate) m += " &middot; " + (r.rate >= 0.1 ? r.rate.toFixed(2) : r.rate.toFixed(3)) + "&times; realtime";
+    if (r.eta_s != null) m += " &middot; ETA " + fmtDur(r.eta_s);
+    m += " &middot; " + fmtDur(r.wall_s) + " wall";
+    if (r.ram_mb) m += " &middot; " + (r.ram_mb >= 1000 ? (r.ram_mb / 1000).toFixed(2) + " GB" : r.ram_mb + " MB");
+    return m;
+  }
+
+  var attachedDir = null, autoAttached = false;
+
   function renderRuns(res) {
     const box = document.getElementById("liveRunList");
     if (!box) return;
     box.innerHTML = "";
     const runs = (res && res.runs) || [];
+    const nProc = (res && res.n_procs) || 0;
     const hdr = document.getElementById("liveScanNote");
     if (hdr) hdr.textContent = runs.length
-      ? (res.solver_running ? "● a solver is running" : "no solver running")
-        + " — " + runs.length + " run(s) found"
+      ? (nProc ? "● " + nProc + " solver process" + (nProc > 1 ? "es" : "") + " running"
+               : "no solver process running")
+        + " — " + runs.length + " run(s) listed"
+        + (res && res.error ? " — " + res.error : "")
       : "no runs found — start a solve, or add a folder to scan";
     runs.forEach(r => {
+      const byProc = r.via === "process";
       const row = document.createElement("div");
-      row.className = "live-run" + (r.live ? " live" : r.done ? " done" : "");
-      var meta = (r.live ? "LIVE" : r.done ? "done" : "idle")
-        + (r.sim_last != null ? " &middot; t=" + r.sim_last + "s" : "")
-        + " &middot; " + fmtAge(r.age_s);
+      row.className = "live-run" + (r.live ? " live" : r.done ? " done" : "")
+        + (byProc ? " proc" : "");
+      var meta = byProc ? procMeta(r)
+        : (r.live ? "LIVE" : r.done ? "done" : "idle")
+          + (r.sim_last != null ? " &middot; t=" + r.sim_last + "s" : "")
+          + " &middot; " + fmtAge(r.age_s)
+          + (r.via === "process*" ? " &middot; was solving this session" : "");
+      var pill = byProc ? '<span class="rpill">process</span>'
+        : (r.via === "process*" ? '<span class="rpill dim">process</span>' : "");
       row.innerHTML =
-        '<span class="rdot"></span>' +
-        '<span class="rn">' + esc(r.name) + "</span>" +
+        '<span class="rdot"></span>' + pill +
+        '<span class="rn" title="' + esc(r.dir) + '">' + esc(r.name) + "</span>" +
         '<span class="rmeta">' + meta + "</span>" +
-        '<button class="rattach">' + (r.live ? "Watch" : "Open") + "</button>";
-      row.querySelector(".rattach").onclick = () => attach(r.dir, r.name);
+        (r.mf4 ? '<button class="rmf4" title="' + esc(r.mf4) + '">MF4</button>' : "") +
+        '<button class="rattach">' + (r.live ? "Watch" : "Open") + "</button>" +
+        (byProc ? '<button class="rstop" title="kill pid ' + r.root_pid + ' and its solver chain">Stop</button>' : "");
+      row.querySelector(".rattach").onclick = () => attach(r.dir, r.name, r.started);
+      const bm = row.querySelector(".rmf4");
+      if (bm) bm.onclick = () => { if (window.pywebview) pywebview.api.view_mf4(r.mf4).catch(() => {}); };
+      const bs = row.querySelector(".rstop");
+      if (bs) bs.onclick = () => stopProc(r);
       box.appendChild(row);
     });
+    // a single live solver and nothing attached yet: watch it without a click
+    const live = runs.filter(r => r.via === "process");
+    if (live.length === 1 && !attachedDir && !autoAttached) {
+      autoAttached = true;
+      attach(live[0].dir, live[0].name, live[0].started);
+    }
+    scheduleRescan(nProc > 0);
   }
 
-  function scan() {
+  function stopProc(r) {
     if (!window.pywebview) return;
+    if (!confirm("Stop the solver in\n" + r.dir + "\n(pid " + r.root_pid + " and its chain)?")) return;
+    pywebview.api.stop_pid(r.root_pid, r.pids || []).then(function () {
+      setTimeout(scan, 1500);
+    }).catch(() => {});
+  }
+
+  var rescanTimer = null, scanning = false;
+  function liveTabVisible() {
+    const t = document.getElementById("tab-live");
+    return !!t && !t.classList.contains("hidden");
+  }
+  // while a solver process is alive, refresh every 5 s so the pid line and
+  // the progress keep moving; otherwise fall back to a lazy 30 s tick
+  function scheduleRescan(fast) {
+    if (rescanTimer) clearTimeout(rescanTimer);
+    rescanTimer = setTimeout(function () {
+      rescanTimer = null;
+      if (liveTabVisible()) scan(true);
+    }, fast ? 5000 : 30000);
+  }
+
+  function scan(quiet) {
+    if (!window.pywebview || scanning) return;
+    scanning = true;
     const note = document.getElementById("liveScanNote");
-    if (note) note.textContent = "scanning…";
-    pywebview.api.scan_runs().then(renderRuns).catch(() => {});
+    if (note && !quiet) note.textContent = "scanning processes and folders…";
+    pywebview.api.scan_runs().then(function (res) {
+      scanning = false; renderRuns(res);
+    }).catch(function () { scanning = false; scheduleRescan(false); });
   }
 
-  function attach(dir, name) {
+  function attach(dir, name, started) {
     if (!window.pywebview) return;
+    attachedDir = dir;
     const st = document.getElementById("liveStatus");
     if (st) { st.textContent = "attaching to " + name + "…"; st.className = "live-status pending"; }
-    pywebview.api.attach_run(dir).then(() => {}).catch(() => {});
+    pywebview.api.attach_run(dir, started || null).then(() => {}).catch(() => {});
   }
 
   window.liveOnEnter = function () {

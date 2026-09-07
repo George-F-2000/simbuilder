@@ -76,11 +76,33 @@ def solver_running():
         return False
 
 
+def run_record(dirpath, now=None, logs=None):
+    """One folder's record: {dir, name, mtime, age_s, live, done, sim_last,
+    mf4, via="folder"} or None when the folder holds no MotionSolve .log."""
+    now = now or time.time()
+    if logs is None:
+        logs = [f for f in os.listdir(dirpath) if f.lower().endswith(".log")]
+    if not logs:
+        return None
+    lg = max((os.path.join(dirpath, f) for f in logs), key=os.path.getmtime)
+    age = now - os.path.getmtime(lg)
+    plt = find_plt(dirpath)
+    done = bool(plt and os.path.getsize(plt) > 2000)
+    mf4s = glob.glob(os.path.join(dirpath, "*.mf4"))
+    return {
+        "dir": dirpath, "name": os.path.basename(dirpath),
+        "mtime": os.path.getmtime(lg), "age_s": int(age),
+        "live": (age < 12 and not done), "done": done,
+        "sim_last": _last_sim_time(lg), "via": "folder",
+        "mf4": (max(mf4s, key=os.path.getmtime) if mf4s else None),
+    }
+
+
 def scan_runs(roots, max_age_h=48, max_depth=3):
     """Find run folders under `roots` that hold a MotionSolve .log. Classify a
     run as LIVE (log written in the last ~12 s and no finished .plt yet) or
     DONE. Returns newest-first, each: {dir, name, mtime, age_s, live, done,
-    sim_last}."""
+    sim_last, mf4, via}."""
     now = time.time()
     seen, runs = set(), []
     for root in roots:
@@ -95,22 +117,42 @@ def scan_runs(roots, max_age_h=48, max_depth=3):
             logs = [f for f in files if f.lower().endswith(".log")]
             if not logs or dirpath in seen:
                 continue
-            lg = max((os.path.join(dirpath, f) for f in logs),
-                     key=os.path.getmtime)
-            age = now - os.path.getmtime(lg)
-            if age > max_age_h * 3600:
+            rec = run_record(dirpath, now, logs)
+            if not rec or rec["age_s"] > max_age_h * 3600:
                 continue
             seen.add(dirpath)
-            plt = find_plt(dirpath)
-            done = bool(plt and os.path.getsize(plt) > 2000)
-            runs.append({
-                "dir": dirpath, "name": os.path.basename(dirpath),
-                "mtime": os.path.getmtime(lg), "age_s": int(age),
-                "live": (age < 12 and not done), "done": done,
-                "sim_last": _last_sim_time(lg),
-            })
+            runs.append(rec)
     runs.sort(key=lambda r: -r["mtime"])
     return runs[:50]
+
+
+def scan_all(roots, remembered=None, max_age_h=48):
+    """Runs by PROCESS first (every live solver on this machine, wherever its
+    folder is), then folders remembered from earlier process sightings (so a
+    run stays in the list after its solver exits - that is when you want to
+    open it), then the folder walk under `roots`. De-duplicated by folder.
+    Returns (runs, live_dirs) - live_dirs are the process-found folders."""
+    import live_procs
+    now = time.time()
+    procs = live_procs.scan(now)
+    runs, seen = [], set()
+    for r in procs:
+        runs.append(r)
+        seen.add(os.path.normcase(r["dir"]))
+    for d in (remembered or []):
+        k = os.path.normcase(d)
+        if k in seen or not os.path.isdir(d):
+            continue
+        rec = run_record(d, now)
+        if rec:
+            rec["via"] = "process*"     # seen solving earlier this session
+            runs.append(rec)
+            seen.add(k)
+    for rec in scan_runs(roots, max_age_h=max_age_h):
+        if os.path.normcase(rec["dir"]) not in seen:
+            runs.append(rec)
+            seen.add(os.path.normcase(rec["dir"]))
+    return runs[:60], [r["dir"] for r in procs]
 
 
 def _last_sim_time(logf):

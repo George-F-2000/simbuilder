@@ -633,6 +633,17 @@ main#tab-live { grid-template-columns: 1fr; }
 .live-run .rattach { font-size: 12px; padding: 3px 12px; border: 1px solid var(--accent);
   color: var(--accent); background: transparent; border-radius: 6px; cursor: pointer; }
 .live-run.live .rattach { background: var(--accent); color: var(--accent-ink); }
+.live-run .rpill { font-size: 10px; font-family: var(--mono); letter-spacing: .04em;
+  text-transform: uppercase; padding: 1px 6px; border-radius: 999px; flex: none;
+  background: #3fb27f22; color: #3fb27f; border: 1px solid #3fb27f55; }
+.live-run .rpill.dim { background: transparent; color: var(--muted); border-color: var(--line); }
+.live-run .rmf4 { font-size: 12px; padding: 3px 10px; border: 1px solid var(--line);
+  color: var(--fg); background: transparent; border-radius: 6px; cursor: pointer; }
+.live-run .rmf4:hover { border-color: var(--accent); color: var(--accent); }
+.live-run .rstop { font-size: 12px; padding: 3px 10px; border: 1px solid #d0554a;
+  color: #d0554a; background: transparent; border-radius: 6px; cursor: pointer; }
+.live-run .rstop:hover { background: #d0554a; color: #fff; }
+.live-run.proc .rmeta { color: var(--fg); }
 .live-vitals { display: flex; gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
 .vtile { flex: 1 1 90px; background: var(--bg); border: 1px solid var(--line);
   border-radius: 9px; padding: 8px 10px; text-align: center; }
