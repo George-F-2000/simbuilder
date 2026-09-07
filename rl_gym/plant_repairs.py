@@ -64,7 +64,7 @@ TIR = None
 
 def apply_cg_shift(text, marker_id=None, pos_x=None):
     """move one CG marker's pos_x (Reference_Marker id=marker_id)"""
-    marker_id = marker_id or CG_SHIFT["marker_id"]; pos_x = CG_SHIFT["pos_x"] if pos_x is None else pos_x
+    marker_id = marker_id or CG_SHIFT["marker_id"]
     if pos_x is None:
         return text, 0
     pat = re.compile(r'(<Reference_Marker\s+id\s*=\s*"' + str(marker_id) + r'".*?pos_x\s*=\s*")[^"]*(")', re.S)
@@ -89,19 +89,30 @@ BRAKE_BAND = 0.5       # the regularised brake (None = off)
 
 
 def apply_brake_band(text, band=None):
-    band = BRAKE_BAND if band is None else band
     if band is None:
         return text, 0
     pat = re.compile(r'(-STEP5\(WZ\(\d+,\d+,\d+\),)-0\.001,-1,0\.001,1(\)\*VARVAL\(3630\d{4}\))')
     return pat.subn(lambda m: "%s-%g,-1,%g,1%s" % (m.group(1), band, band, m.group(2)), text)
 
 
+def _env(name, default):
+    """per-run override of a recorded repair value: PR_<NAME>=off disables it,
+    PR_<NAME>=<number> replaces it (used by the discrimination probes)"""
+    import os
+    v = os.environ.get("PR_" + name)
+    if v is None:
+        return default
+    return None if v.lower() == "off" else float(v)
+
+
 def apply_all(text):
-    """every repair with its recorded value; returns (text, counts)"""
+    """every repair with its recorded value (env-overridable); returns (text, counts)"""
+    springs = dict(front_k=_env("FRONT_K", SPRINGS["front_k"]), front_preload=_env("FRONT_P", SPRINGS["front_preload"]),
+                   rear_k=_env("REAR_K", SPRINGS["rear_k"]), rear_preload=_env("REAR_P", SPRINGS["rear_preload"]))
     n = {"front": 0, "rear": 0}
-    if any(v is not None for v in SPRINGS.values()):
-        text, n = apply_springs(text, **SPRINGS)
-    text, n["cg"] = apply_cg_shift(text)
+    if any(v is not None for v in springs.values()):
+        text, n = apply_springs(text, **springs)
+    text, n["cg"] = apply_cg_shift(text, pos_x=_env("CG_X", CG_SHIFT["pos_x"]))
     text, n["tir"] = apply_tir(text)
-    text, n["brake"] = apply_brake_band(text)
+    text, n["brake"] = apply_brake_band(text, _env("BRAKE_BAND", BRAKE_BAND))
     return text, n
