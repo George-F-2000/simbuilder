@@ -46,7 +46,10 @@ def row(d):
     mdf = MDF(mf4)
     v = np.asarray(mdf.get("VehicleSpeed").samples, float)
     t = np.asarray(mdf.get("VehicleSpeed").timestamps)
-    s = score(mf4)
+    try:
+        s = score(mf4)
+    except Exception as e:   # a partial or killed run cannot be scored; skip it, say so
+        print('skipping %s: %s' % (name, e)); return None
     return (tag, ev, stamp, man, err, t[-1], v[-1], v.max(), s["wh_per_km_common"], s["jerk_rms"], s["disturb_peak"])
 
 
