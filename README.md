@@ -196,6 +196,24 @@ columns; per-row open-folder / open-in-viewer buttons; Wh/km bar chart
 colored by EMS strategy; the efficiency-vs-drivability scatter (bottom-
 left wins); CSV export for publication plots.
 
+## Live tab: runs found by process
+
+The Live tab lists every MotionSolve solve on the machine **by process**,
+not by folder: each `msolve.exe` / `mbd_d.exe` is mapped to its run folder
+(the absolute deck path on its command line, else the process's current
+directory read from the process itself - no extra dependency), then the
+folder is read like any run: last `Time=` from the `.log`, total from the
+ADF's maneuver caps, rate vs real time, ETA, RAM, and the `.mf4` once the
+converter has landed one. A run launched from a script, a second
+SimBuilder or MotionView shows up the same way. While a solver is alive
+the list refreshes every 5 s; a lone live run is attached automatically
+(solver vitals stream in, channels fill when it finishes). Folders seen
+solving stay listed for the session so a finished run can be opened.
+**Stop** kills the whole launcher chain (cmd → tclsh → msolve → mbd_d)
+after a confirmation; **MF4** opens the converted file in the viewer.
+The folder walk under the runs folder and "Add folder to scan" roots is
+still there for older runs.
+
 ## Import a real drive
 
 Scenario tab → **Import real drive**: pick an MF4 logged in the actual
