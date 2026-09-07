@@ -571,6 +571,22 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
         log("  bushing rotational damping x{:g} applied ({} fields)".format(
             _bds, _nbd))
 
+    # Plant repairs toward physical values (settings 'plant_repairs', default
+    # on): front spring rate/preload, rear preload, body CG for the real weight
+    # split, and the wheel brakes' sign band - recorded in rl_gym/plant_repairs.py
+    # (Model Bible 30.21, 30.28, 30.29). Off = the deck as exported.
+    if settings.get("plant_repairs", True):
+        try:
+            _rg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl_gym")
+            if _rg not in sys.path:
+                sys.path.insert(0, _rg)
+            from plant_repairs import apply_all as _apply_repairs
+            deck_text, _nrep = _apply_repairs(deck_text)
+            log("  plant repairs applied: " + ", ".join(
+                "{} x{}".format(k, v) for k, v in _nrep.items()))
+        except Exception as _exc:   # never let a repair hook stop a run
+            log("  plant repairs NOT applied: {}".format(_exc))
+
     adf_match = ADF_REF.search(deck_text)
     if not adf_match:
         raise ValueError(
