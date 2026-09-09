@@ -116,6 +116,7 @@ function bindVehicleInputs() {
   $("#vhEmsEnable").checked = !!veh.ems.enabled;
   $("#vhEmsStrategy").value = veh.ems.strategy;
   $("#vhEmsThreshold").value = veh.ems.threshold;
+  $("#vhEmsFile").textContent = veh.ems.file || "none chosen";
   for (const [id, prop] of VEH_FIELDS) $("#" + id).value = veh[prop];
   renderMotorCards();
   renderEms();
@@ -131,6 +132,11 @@ const EMS_DESC = {
     "transitions between single-motor and shared operation.",
   even: "Always 50/50 between the axles — naive baseline for comparison.",
   single_motor: "Always one axle — the other motor idles. Baseline / limp mode.",
+  custom_mat: "Use a split map you supply (.mat with w, T_dem, r_ch — the format the " +
+    "motor FMU reads). This is how an RL Gym graduate, flattened to a map, goes into the car.",
+  custom_fmu: "Replace the deck's controller FMU with one you supply that exposes the same " +
+    "pins (the seat swap): the plant, driver and solver stay identical, only the brain changes. " +
+    "Model-exchange decks are switched to co-simulation automatically when the FMU needs it.",
 };
 
 // Fuller "textbook page" per strategy: plain-English, the engineering, and
@@ -227,6 +233,36 @@ const EMS_LEARN = {
     <h4>Trade-off</h4>
     <p>Efficient when light, but capacity-limited. Never the answer for a
     performance run; very useful as a control case.</p>`,
+  custom_mat: `
+    <h4>In plain English</h4>
+    <p>You hand the car a finished split table. The motor FMU reads a grid of
+    r (share to the rear) over rear-motor speed and combined torque demand;
+    any .mat with <code>w</code>, <code>T_dem</code> and <code>r_ch</code> is
+    interpolated onto the deck's own grid and injected for the run.</p>
+    <h4>Where such a file comes from</h4>
+    <p>The RL Gym trains a policy; <code>rl_gym/policy_to_rch.py</code>
+    flattens it into exactly this format (the committed knee map is one).
+    A hand-drawn table works too.</p>
+    <h4>Trade-off</h4>
+    <p>A table cannot look back in time or react to anything the grid does not
+    carry. For a controller with guards, memory or a network inside, use the
+    FMU seat swap instead.</p>`,
+  custom_fmu: `
+    <h4>In plain English</h4>
+    <p>The deck has one socket for the powertrain controller. Any FMU that
+    exposes the same pins (throttle, vehicle speed, two motor speeds in;
+    torques, power demands, SOC, split out) can sit in it. Pick the file and
+    the run copies it in, re-points the deck at it and, if the FMU only
+    offers co-simulation, switches the deck's mode string for you.</p>
+    <h4>What this is for</h4>
+    <p>The George EMS controllers are Simulink exports with a learned split
+    policy wrapped in envelopes, slew, hysteresis, a slip limiter, a regen ramp
+    and a creep floor. They were seated this way for every tournament.</p>
+    <h4>Trade-off</h4>
+    <p>The pins must match exactly, and motor maps injected by the Motor
+    Builder do not reach inside a foreign FMU: the controller's own maps
+    apply. Co-simulation FMUs run at the deck's communication step (10 ms
+    here), which is faster than the vendor model-exchange FMU.</p>`,
 };
 
 function renderEms() {
@@ -236,9 +272,31 @@ function renderEms() {
   $("#vhEmsStrategy").disabled = !on;
   $("#vhEmsThreshold").disabled = !on;
   $("#emsThresholdWrap").style.display = strat === "rule" ? "" : "none";
+  const custom = strat === "custom_mat" || strat === "custom_fmu";
+  $("#emsFileWrap").style.display = custom ? "" : "none";
+  $("#btnEmsFile").disabled = !on;
+  $("#vhEmsFile").textContent = (veh.ems && veh.ems.file) || "none chosen";
   $("#emsDesc").textContent = EMS_DESC[strat] || "";
   $("#emsLearnBody").innerHTML = EMS_LEARN[strat] || "";
 }
+
+async function pickEmsFile() {
+  const strat = $("#vhEmsStrategy").value;
+  const spec = strat === "custom_fmu" ? "Controller FMU (*.fmu)|*.fmu" : "Split map (*.mat)|*.mat";
+  const p = await pywebview.api.pick_file(spec);
+  if (p) {
+    veh.ems = veh.ems || {};
+    veh.ems.file = p;
+    renderEms();
+    vehStore();
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const b = $("#btnEmsFile");
+  if (b) b.onclick = pickEmsFile;
+  const s = $("#vhEmsStrategy");
+  if (s) s.addEventListener("change", renderEms);
+});
 
 function readVehicleInputs() {
   veh.suspF = $("#vhSuspF").value;
@@ -247,10 +305,12 @@ function readVehicleInputs() {
   veh.deckDefault = $("#vhDeckDefault").checked;
   veh.generateMotors = $("#vhGenMotors").checked;
   veh.applyMass = $("#vhApplyMass").checked;
+  const emsFile = (veh.ems && veh.ems.file) || null;
   veh.ems = {
     enabled: $("#vhEmsEnable").checked,
     strategy: $("#vhEmsStrategy").value,
     threshold: parseFloat($("#vhEmsThreshold").value) || 250,
+    file: emsFile,
   };
   for (const [id, prop, isNum] of VEH_FIELDS) {
     const v = $("#" + id).value;
@@ -573,7 +633,9 @@ function vehiclePayload() {
     ems: {
       enabled: !!veh.ems.enabled,
       strategy: veh.ems.strategy,
-      params: veh.ems.strategy === "rule" ? { threshold_nm: veh.ems.threshold } : {},
+      params: veh.ems.strategy === "rule" ? { threshold_nm: veh.ems.threshold }
+        : veh.ems.strategy === "custom_mat" ? { mat_path: veh.ems.file || null }
+        : veh.ems.strategy === "custom_fmu" ? { fmu_path: veh.ems.file || null } : {},
     },
   };
 }

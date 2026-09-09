@@ -372,10 +372,15 @@
                 <option value="fuzzy">Fuzzy logic</option>
                 <option value="even">Even split (50/50 baseline)</option>
                 <option value="single_motor">Single motor only</option>
+                <option value="custom_mat">Custom split map (.mat) &mdash; e.g. an RL graduate</option>
+                <option value="custom_fmu">Custom controller FMU (seat swap) &mdash; e.g. GeorgeEMS_Champion.fmu</option>
               </select>
             </label>
             <label id="emsThresholdWrap">Rule threshold (N·m)
               <input type="number" id="vhEmsThreshold" step="10" min="0" value="250"></label>
+            <label id="emsFileWrap" style="display:none">File
+              <span id="vhEmsFile" class="hint" style="margin:0 6px">none chosen</span>
+              <button id="btnEmsFile" class="ghost" type="button">Browse…</button></label>
           </div>
           <p id="emsDesc" class="hint"></p>
           <details id="emsLearn" class="ems-explain">

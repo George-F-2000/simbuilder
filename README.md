@@ -170,6 +170,17 @@ Strategies (`ems_builder.py`), all producing the same map interface:
 - **rule** — single motor below a demand threshold, ramp to sharing above.
 - **fuzzy** — fuzzy-logic blend of demand/speed memberships.
 - **even** / **single_motor** — 50/50 and one-axle baselines.
+- **custom_mat** — a split map you supply (`.mat` with `w`, `T_dem`,
+  `r_ch`), interpolated onto the deck's grid. This is how an RL Gym
+  graduate, flattened with `rl_gym/policy_to_rch.py`, goes into the car.
+- **custom_fmu** — the seat swap: replace the deck's controller FMU with one
+  you supply that exposes the same pins (e.g. a Simulink export carrying a
+  learned policy plus its guards). The run copies it in, re-points the deck,
+  and switches the FMU mode string to CoSimulation when the file only
+  offers co-simulation. The plant, driver and solver stay identical.
+
+Both custom options show a **Browse…** button on the card; the chosen path
+is kept with the vehicle.
 
 Compare strategies by running each (same vehicle, same scenario) and viewing
 `EM1Torque`/`EM2Torque` and motor efficiency in the MF4 viewer. The chosen

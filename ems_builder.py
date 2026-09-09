@@ -335,11 +335,53 @@ def build_ratio_map(strategy, deck_map_path, motors=None, params=None, log=print
     return out
 
 
+def seat_custom_fmu(ems, deck_text, run_dir, log=print):
+    """'custom_fmu': replace the deck's powertrain/VCU FMU with a controller
+    FMU the user supplies that exposes the same pins - the "seat swap" every
+    tournament used for the learned controllers. Copies the file into the run
+    folder, re-points every reference to the motor FMU at it, and switches the
+    deck's FMU mode string from ModelExchange to CoSimulation when the new FMU
+    only offers co-simulation. Returns (strategy or None, deck_text)."""
+    import re
+    import shutil
+    import zipfile
+    path = (ems.get("params") or {}).get("fmu_path")
+    if not path or not os.path.isfile(path):
+        log("  WARNING: custom_fmu: no controller FMU chosen - deck default kept")
+        return None, deck_text
+    dest = os.path.join(run_dir, os.path.basename(path))
+    if os.path.normpath(dest) != os.path.normpath(path):
+        shutil.copy(path, dest)
+    new = '"' + dest.replace("\\", "/") + '"'
+    deck_text, n_ref = re.subn(r'"[^"]*Motor_PMSM_dual\.fmu"', new, deck_text)
+    if n_ref == 0:
+        log("  WARNING: custom_fmu: the deck has no Motor_PMSM_dual.fmu "
+            "reference to swap - skipped")
+        return None, deck_text
+    try:
+        md = zipfile.ZipFile(dest).read("modelDescription.xml").decode(
+            "utf-8", "replace")
+        has_me, has_cs = "<ModelExchange" in md, "<CoSimulation" in md
+    except Exception:
+        has_me, has_cs = True, True
+    n_mode = 0
+    if has_cs and not has_me:
+        pat = re.compile(r'(string\s*=\s*' + re.escape(new) +
+                         r'\s*/>\s*<Reference_String\s+id\s*=\s*"-?\d+"\s+'
+                         r'string\s*=\s*")ModelExchange(")')
+        deck_text, n_mode = pat.subn(r"\g<1>CoSimulation\g<2>", deck_text)
+    log("  EMS: custom controller FMU seated: {} (references x{}, mode "
+        "ModelExchange->CoSimulation x{})".format(os.path.basename(dest),
+                                                  n_ref, n_mode))
+    return "custom_fmu", deck_text
+
+
 def apply_ems_any(ems, deck_text, run_dir, motors, log=print):
     """apply_ems for BOTH deck styles. External opt_trq_ratio .mat in the run
     folder (doublelane): shadow the file. Map inside the motor FMU (demo EV):
     extract its axes, rebuild r_ch, and inject it back into the run's FMU
     copy (making + re-pointing the copy if motor injection didn't already).
+    'custom_fmu' swaps the whole controller instead (seat_custom_fmu).
     Returns (strategy applied or None, possibly-updated deck_text)."""
     if not ems or not ems.get("enabled"):
         return None, deck_text
@@ -347,6 +389,8 @@ def apply_ems_any(ems, deck_text, run_dir, motors, log=print):
     if strategy == "deck_default":
         log("  EMS: deck default map (builder off)")
         return None, deck_text
+    if strategy == "custom_fmu":
+        return seat_custom_fmu(ems, deck_text, run_dir, log=log)
 
     if any("opt_trq_ratio" in f.lower() for f in os.listdir(run_dir)):
         return apply_ems(ems, run_dir, motors, log=log), deck_text
