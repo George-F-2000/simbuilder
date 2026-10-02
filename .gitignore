@@ -30,3 +30,13 @@ tests/_tmp/
 
 # editor/assistant local config
 .claude/
+
+# result data and solver/training logs are not project code
+*.log
+rl_gym/*.log
+rl_gym/baselines.json
+rl_gym/healed_tournament*.json
+rl_gym/pareto_*.json
+cycles/george_demand.txt
+calib_history.json
+calib_state.json

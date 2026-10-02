@@ -1,30 +1,49 @@
-"""plant_repairs.py - deck-level repairs toward physical values (Bible 30.21).
-The healed deck's coil springs are template placeholders: 54.451007 N/mm at
-both ends, front preload 12000 N, rear 2270 N. At rest the rear strut sits
-14.5 mm into its jounce bumper (768 N per side) and the front has 19 mm of
-jounce travel left; the front wheel rate is ~12.5 N/mm (0.67 Hz ride
-frequency) so every lift-off dives ~110 mm onto the front bump stops, and a
-50% tip-in at 25 km/h can put both front tyres in the air for 60 ms.
-Repair: front spring rate to a physical ride frequency (~1.2 Hz for the
-sprung corner load at the measured 0.48 motion ratio) and both preloads set
-so the static position sits with the bump stops clear. Values are found with
-ride_height_static.py and recorded here; every runner applies them."""
+"""
+plant_repairs.py - plant repairs toward physical values, applied to the
+exported deck by the pipeline (settings 'plant_repairs', default on).
+
+The RECORDED values are vehicle-specific and live in rl_gym/plant.local.json
+(gitignored): {"FRONT_LEN", "REAR_LEN"} (the spring length strings that tell
+front from rear), "SPRINGS" {front_k, front_preload, rear_k, rear_preload},
+"CG_SHIFT" {marker, pos_x}, "TIR" (tyre file override or null), "BRAKE_BAND".
+Without that file every repair is off and the deck runs exactly as exported.
+
+Per-run env overrides: PR_FRONT_K, PR_FRONT_P, PR_REAR_K, PR_REAR_P, PR_CG_X,
+PR_BRAKE_BAND - unset keeps the recorded value, "off" disables one, a number
+overrides it.
+"""
 import re
 
-FRONT_LEN, REAR_LEN = "141.06519", "156.4289"   # the deck's coil-spring reference lengths (front / rear)
+import json as _json
+import os as _os
+
+
+def _local(name, default=None):
+    """A recorded repair value from rl_gym/plant.local.json (gitignored)."""
+    import sys as _sys
+    here = (_os.path.join(_os.path.dirname(_os.path.abspath(_sys.executable)), "rl_gym")
+            if getattr(_sys, "frozen", False) else _os.path.dirname(_os.path.abspath(__file__)))
+    try:
+        with open(_os.path.join(here, "plant.local.json"), encoding="utf-8") as fh:
+            return _json.load(fh).get(name, default)
+    except (OSError, ValueError):
+        return default
+
+
+FRONT_LEN, REAR_LEN = _local("FRONT_LEN"), _local("REAR_LEN")
 
 # repaired values (None = leave the deck's value); filled in by the static study
-# static study 2026-09-04 (ride_height_static.py runs A-C): at rest the wheel centres
-# sit within 6 mm of the design position, both bump stops unloaded, pitch 0.07 deg,
-# tyre loads 7.66 kN front / 5.86 kN rear per wheel (unchanged mass)
-# FRONT ONLY: lifting the rear off its bump stop (rear_preload 5355) makes the brake-held
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
 # standstill fail (fore-aft rocking on the tyres' carcass stiffness with the ESP FMU
-# pulsing; DASPK stalls at 0.6-1.6 s; more tyre low-speed damping makes it worse).
-# The rear sag (14.5 mm into the bump stop, 47 mm below design) stays a documented defect.
-# 2026-09-06 static study H-J on the 48/52 mass split with the regularised brakes: both
-# axles within 2.2 mm of the design position, pitch 0.01 deg, bump stops clear, tyre loads
-# 6485 N front / 7029 N rear per wheel (48.0 / 52.0).
-SPRINGS = dict(front_k=174.0, front_preload=14100.0, rear_k=None, rear_preload=6810.0)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+SPRINGS = _local("SPRINGS")
 
 
 def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_preload=None):
@@ -50,16 +69,16 @@ def apply_springs(text, front_k=None, front_preload=None, rear_k=None, rear_prel
     return text, n
 
 
-# mass distribution (2026-09-06, George: the real car is ~48/52 front/rear; the deck's
-# Vehicle Body CG marker sits at x 2150 (a template, front-heavy placement) giving
-# 56.7/43.3). Moving the Vehicle Body's CG marker to x 2602.5 puts the whole-vehicle CG
-# at 52% rear (wheelbase 3097.4 from the contact patches, front contact x 995.7); the
-# battery pack (x 2743.7) and the motors (x 1000 / 4000) stay where they are.
-CG_SHIFT = dict(marker_id="30301010", pos_x=2602.5)   # 48/52 split (None = off)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+CG_SHIFT = _local("CG_SHIFT")
 
-# tyre file override (None = the deck's own file). LYRIQ_PS4SUV_265_50R20_um104.tir =
-# USE_MODE 104 (relaxation off), the standstill recipe of 2026-07-21.
-TIR = None
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+TIR = _local("TIR")
 
 
 def apply_cg_shift(text, marker_id=None, pos_x=None):
@@ -79,13 +98,13 @@ def apply_tir(text, tir=None):
     return re.subn(r'"[^"]*LYRIQ_PS4SUV_265_50R20[^"]*\.tir"', '"' + tir.replace("\\", "/") + '"', text)
 
 
-# brake friction regularisation (2026-09-06): the four wheel brakes are Coulomb brakes,
-# torque = -STEP5(wheel omega, -0.001, -1, 0.001, 1) x pressure x area x mu x radius. The
-# +/-0.001 rad/s sign band flips the full brake torque with the slightest wheel wiggle in
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
+# (recorded value: see plant.local.json)
 # a brake-held standstill (the DAE landmine that killed every rear-off-its-bump-stop hold
 # and fed the ESP's pressure pulsing). Widening the band to +/-BRAKE_BAND rad/s makes the
-# brake viscous inside that band and changes nothing above it (0.5 rad/s = 0.7 km/h).
-BRAKE_BAND = 0.5       # the regularised brake (None = off)
+# (recorded value: see plant.local.json)
+BRAKE_BAND = _local("BRAKE_BAND")
 
 
 def apply_brake_band(text, band=None):
@@ -116,3 +135,13 @@ def apply_all(text):
     text, n["tir"] = apply_tir(text)
     text, n["brake"] = apply_brake_band(text, _env("BRAKE_BAND", BRAKE_BAND))
     return text, n
+
+_apply_all_recorded = apply_all
+
+
+def apply_all(text):
+    """No local file -> no repair: the deck as exported, with zero counts."""
+    if SPRINGS is None and CG_SHIFT is None and TIR is None and BRAKE_BAND is None:
+        return text, {"front": 0, "rear": 0, "cg": 0, "tir": 0, "brake": 0}
+    return _apply_all_recorded(text)
+

@@ -45,6 +45,9 @@ TIRE_SRC = os.path.join(MBD, _VLC.get("tire_file", "demo_tire.tir"))
 AERO = os.path.join(MBD, _VLC.get("aero_file", "demo_aero.aae"))
 VEHJSON = os.path.join(MBD, _VLC.get("vehicle_json", "demo.vehicle.json"))
 STEP_S = 2.0
+# real-log channel names for the reference (vehicle-specific): vehicle_local.json
+# "log_channels" = {"speed": ..., "pedal": ..., "torque_front": ...}
+_LOGCH = dict((_VLC.get("log_channels") or {}) if isinstance(_VLC, dict) else {})
 
 
 def _state_path():
@@ -55,50 +58,27 @@ def _hist_path():
     return os.path.join(pipeline.app_dir(), "calib_history.json")
 
 
-DEFAULT_KNOBS = {"pedal_gain": 1.00, "ems": "single_motor",
-                 "lmy": 0.75, "smoothing_hz": 1.0}
-
+DEFAULT_KNOBS = {"pedal_gain": 1.0, "ems": "single_motor", "lmy": 1.0, "smoothing_hz": 10.0}
 KNOB_META = {
-    "pedal_gain": {
-        "label": "Pedal map gain",
-        "range": [0.7, 1.3], "step": 0.02,
-        "tip": ("How much MODEL pedal your real foot commands (a multiplier "
-                "on the fitted foot-to-model map). Turn UP if the virtual "
-                "speed UNDERSHOOTS the real trace; DOWN if it overshoots. "
-                "Default 1.00 = the map fitted from your MCT dyno log "
-                "(2026-07-26). This is throttle-cable calibration, not "
-                "physics."),
-    },
-    "ems": {
-        "label": "EMS strategy (which axles drive)",
-        "options": ["single_motor", "traction", "even", "ratio_even",
-                    "loss_optimal", "rear_only"],
-        "tip": ("Which motors carry the torque. YOUR REAL CAR ran FRONT-ONLY "
-                "for the entire MCT test (measured: rear torque = 0 for "
-                "3.5 h), so single_motor (all-front) matches reality. The "
-                "others are what-if strategies - unvalidated until the AWD "
-                "log arrives; a custom map fitted from that log will appear "
-                "here when it does."),
-    },
-    "lmy": {
-        "label": "Tyre rolling-resistance scale (LMY)",
-        "range": [0.5, 1.2], "step": 0.05,
-        "tip": ("Scales the tyre's rolling drag. UP = more drag = the car "
-                "coasts down faster and uses more energy; DOWN = the "
-                "opposite. Default 0.75 = calibrated to the tyre's RATED "
-                "Crr, validated within +4% of your dyno data. If the "
-                "virtual car carries too much speed between pedal inputs, "
-                "raise it slightly."),
-    },
-    "smoothing_hz": {
-        "label": "Throttle smoothing (Hz)",
-        "range": [0.5, 10.0], "step": 0.5,
-        "tip": ("How quickly pedal movements reach the powertrain. 1 Hz = "
-                "smooth (cuts motor-torque ripple ~10x - the validated "
-                "tune); 10 Hz = crisp but rippled. Shapes transient "
-                "response only - steady speeds are unaffected."),
-    },
+    "pedal_gain": {"label": "Pedal map gain", "range": [0.5, 2.0], "step": 0.05,
+                   "tip": "Multiplier on the pedal-map output before it reaches the throttle."},
+    "ems": {"label": "EMS strategy",
+            "options": ["single_motor", "traction", "even", "ratio_even", "loss_optimal", "rear_only"],
+            "tip": "Torque-split strategy used for the replay."},
+    "lmy": {"label": "Tyre LMY", "range": [0.5, 3.0], "step": 0.05,
+            "tip": "Rolling-resistance scale written into a copy of the tyre file."},
+    "smoothing_hz": {"label": "Throttle smoothing [Hz]", "range": [1, 50], "step": 1,
+                     "tip": "ADF THROTTLE_STANDARD smoothing frequency."},
 }
+# The calibrated defaults and the evidence notes behind them are vehicle-specific:
+# calib.local.json (gitignored) {"default_knobs": {...}, "knob_meta": {...}} overrides both.
+try:
+    with open(os.path.join(pipeline.app_dir(), "calib.local.json"), encoding="utf-8") as _fh:
+        _cl = json.load(_fh)
+    DEFAULT_KNOBS.update(_cl.get("default_knobs") or {})
+    KNOB_META.update(_cl.get("knob_meta") or {})
+except (OSError, ValueError):
+    pass
 
 
 def get_state():
@@ -215,9 +195,13 @@ def run_calibration(settings, knobs, log=lambda s: None):
         s_ = m.get(n)
         return np.asarray(s_.timestamps, float), np.asarray(s_.samples, float)
 
-    tp, ped = ch("AccelPdlPos")
-    tv, vv = ch("VehSpd_VCU")
-    tF, FF = ch("F_MotTrq")
+    missing = [r for r in ("speed", "pedal", "torque_front") if not _LOGCH.get(r)]
+    if missing:
+        raise RuntimeError("vehicle_local.json needs 'log_channels' {speed, pedal, torque_front} "
+                           "for the reference log (missing: %s)" % ", ".join(missing))
+    tp, ped = ch(_LOGCH["pedal"])
+    tv, vv = ch(_LOGCH["speed"])
+    tF, FF = ch(_LOGCH["torque_front"])
     m.close()
     tt = np.arange(w["t0"], w["t1"], 0.25)
     trel = tt - tt[0]
@@ -240,9 +224,9 @@ def run_calibration(settings, knobs, log=lambda s: None):
     v["aeroPath"] = AERO
     payload = {"deck_default": False, "generate_motors": True,
                "apply_mass": True, "tire_path": tire, "aero_path": AERO,
-               "pack_voltage": 360.0,
+               "pack_voltage": _VLC.get("pack_voltage", settings.get("pack_voltage", 380.0)),
                "ems": {"enabled": True, "strategy": knobs["ems"],
-                       "params": {"mass_kg": 2746.94, "wheelbase_m": 3.094}},
+                       "params": {"mass_kg": _VLC.get("mass_kg", 2000.0), "wheelbase_m": _VLC.get("wheelbase_m", 3.0)}},
                "spec": v}
     adf = _adf_constants("Calib_attempt", segs, v_real[0] * 1000 / 3.6,
                          knobs["smoothing_hz"], segs[0][1])

@@ -44,6 +44,19 @@ EVENT_MIN_GAP_S = 2.0
 CLASSES = (10, 20, 30, 40, 50, 60, 100)
 
 
+
+def _logch(role):
+    """Real-log channel name for `role` from vehicle_local.json "log_channels"
+    (gitignored); "" when not configured, so the model-name fallback is used."""
+    try:
+        here = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) \
+            else os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, "vehicle_local.json"), encoding="utf-8") as fh:
+            return (json.load(fh).get("log_channels") or {}).get(role, "") or ""
+    except (OSError, ValueError):
+        return ""
+
+
 def _targets():
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     with open(os.path.join(base, "dq_targets.json")) as f:
@@ -145,13 +158,13 @@ def dq_from_mf4(mf4_path):
     # ACCEL axis: always from the RAW speed - the floor clamp puts an
     # artificial 0->1 km/h step at driveaway, and differentiating that gives
     # a ~30 m/s3 phantom tARM spike. True motion is the honest source.
-    v, t = get("VehSpd_VCU")
+    v, t = get(_logch("speed"))
     v_raw, t_raw = get("VehicleSpeed")
     if v is None:
         v, t = v_raw, t_raw
     if v_raw is None:
         v_raw, t_raw = v, t
-    pedal, tp = get("AccelPdlPos")
+    pedal, tp = get(_logch("pedal"))
     if pedal is None:
         pedal, tp = get("AcceleratorPedal")
     if v is None or pedal is None:

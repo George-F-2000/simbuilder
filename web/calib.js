@@ -87,9 +87,9 @@ async function calibLoad() {
   calibState = await pywebview.api.calib_state();
   renderKnobs(); renderHistory();
   $("#calibHint").textContent = calibState.reference.ok
-    ? "Reference: the 61 s MCT city window (real pedal + torque). Set knobs, " +
-      "then Run & Score (~15 min, machine-guarded)."
-    : "Reference log missing — expected OVERLAY - Real vs Virtual\\REAL_mct_chunk_full.mf4";
+    ? "Reference: the configured real-log window (pedal + torque). Set knobs, " +
+      "then Run & Score (long; machine-guarded)."
+    : "Reference log missing — set the reference paths and vehicle_local.json log_channels";
 }
 
 async function calibRun() {
