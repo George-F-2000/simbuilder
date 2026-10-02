@@ -838,6 +838,36 @@ class Api:
     def optim_set_dir(self):
         return self._optim_api().optim_set_dir()
 
+    # ---- local assistant (agent/) ----------------------------------------
+    # An offline language model that acts only through the optim_* tools.
+
+    def _agent_api(self):
+        if getattr(self, "_agent", None) is None:
+            from agent.api import AgentApi
+            self._agent = AgentApi(self, self._optim_api())
+        return self._agent
+
+    def agent_state(self):
+        return self._agent_api().agent_state()
+
+    def agent_pick_model(self):
+        return self._agent_api().agent_pick_model()
+
+    def agent_set(self, key, value):
+        return self._agent_api().agent_set(key, value)
+
+    def agent_send(self, text):
+        return self._agent_api().agent_send(text)
+
+    def agent_tail(self):
+        return self._agent_api().agent_tail()
+
+    def agent_stop(self):
+        return self._agent_api().agent_stop()
+
+    def agent_reset(self):
+        return self._agent_api().agent_reset()
+
     def open_viewer_app(self):
         subprocess.Popen(self_command("--viewer"))
 
@@ -911,8 +941,46 @@ def _launch_tool(mod_name):
         raise
 
 
+def selfcheck():
+    """`SimBuilder.exe --selfcheck`: prove the bundle without a window. Writes
+    %TEMP%/simbuilder_selfcheck.json (the windowed exe has no console) with the
+    import status of every optional module and the local-file loaders, then
+    exits 0 when all required imports work."""
+    import tempfile
+    out = {"frozen": bool(getattr(sys, "frozen", False)), "base": BASE, "modules": {}}
+    for mod in ("pipeline", "optimizer", "optimizer.api", "optimizer.study", "agent", "agent.api",
+                "llama_cpp", "calibration", "drive_quality", "pedal_map", "live_procs", "asammdf", "scipy"):
+        try:
+            __import__(mod)
+            out["modules"][mod] = "ok"
+        except Exception as exc:
+            out["modules"][mod] = "{}: {}".format(type(exc).__name__, str(exc)[:120])
+    try:
+        import pipeline
+        s = pipeline.load_settings()
+        out["settings_keys"] = sorted(s)
+        out["deck_exists"] = os.path.isfile(s.get("deck", ""))
+        rg = os.path.join(os.path.dirname(os.path.abspath(pipeline.__file__)), "rl_gym", "plant_repairs.py")
+        out["plant_repairs_bundled"] = os.path.isfile(rg)
+        import pedal_map
+        out["pedal_map_identity"] = pedal_map.real_to_model(37.5) == 37.5
+        api = Api()
+        out["optim_state_ok"] = bool(api.optim_state().get("ok"))
+        out["agent_state_ok"] = bool(api.agent_state().get("ok"))
+    except Exception as exc:
+        out["error"] = "{}: {}".format(type(exc).__name__, str(exc)[:200])
+    required = ("pipeline", "optimizer.api", "agent.api", "calibration", "live_procs")
+    out["ok"] = all(out["modules"].get(m) == "ok" for m in required) and "error" not in out
+    path = os.path.join(tempfile.gettempdir(), "simbuilder_selfcheck.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(out, fh, indent=1)
+    return 0 if out["ok"] else 1
+
+
 def main():
     argv = sys.argv[1:]
+    if argv and argv[0] == "--selfcheck":
+        sys.exit(selfcheck())
     if argv and argv[0] == "--viewer":
         # hand the remaining args (mf4 paths) to the viewer, which reads
         # them from sys.argv itself

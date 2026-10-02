@@ -7,12 +7,19 @@ datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/
          ('deck_hook_example.py', '.')]
 binaries = []
 hiddenimports = ['viewer', 'plt_gui', 'ems_builder', 'motor_gen', 'fmu_inject', 'drive_cycles', 'drive_import', 'results', 'live_tail', 'drive_quality', 'pedal_map', 'perf_event', 'calibration', 'rl_gym_bridge',
-                 'optimizer', 'optimizer.api', 'optimizer.logmatch', 'optimizer.replay', 'optimizer.plant', 'optimizer.study', 'live_procs']
+                 'optimizer', 'optimizer.api', 'optimizer.logmatch', 'optimizer.replay', 'optimizer.plant', 'optimizer.study', 'live_procs',
+                 'agent', 'agent.api', 'agent.agent', 'agent.llm', 'agent.tools']
 tmp_ret = collect_all('tkinterdnd2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 # Explicitly bundle matplotlib (mpl-data fonts/backends/matplotlibrc) so the
 # MF4 viewer opens on machines where PyInstaller's auto-hook under-collects -
 # the "fault exception on another PC" cause. TkAgg backend included.
+# the local assistant's runtime (CPU wheel): native DLLs must not be UPX-packed
+try:
+    _r = collect_all('llama_cpp')
+    datas += _r[0]; binaries += _r[1]; hiddenimports += _r[2]
+except Exception:
+    pass
 for _pkg in ('matplotlib', 'asammdf'):
     _r = collect_all(_pkg)
     datas += _r[0]; binaries += _r[1]; hiddenimports += _r[2]
@@ -29,7 +36,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['PyQt5', 'PySide6', 'PyQt6', 'PySide2', 'torch', 'stable_baselines3', 'gymnasium', 'plotly', 'llama_cpp'],
+    excludes=['PyQt5', 'PySide6', 'PyQt6', 'PySide2', 'torch', 'stable_baselines3', 'gymnasium', 'plotly'],
     noarchive=False,
     optimize=0,
 )
@@ -46,7 +53,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=['llama.dll', 'ggml.dll', 'ggml-base.dll', 'ggml-cpu.dll', 'llava.dll', 'mtmd.dll'],
     runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,

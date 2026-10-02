@@ -243,6 +243,8 @@ class OptimizerApi:
         return self.optim_state()
 
 
+# the subset the local agent may call (agent/tools.py mirrors it); optim_overlay
+# and the file dialogs are page-only
 TOOL_METHODS = ("optim_state", "optim_inspect_log", "optim_save_map", "optim_find_windows",
                 "optim_start", "optim_status", "optim_stop", "optim_export", "optim_history",
-                "optim_study", "optim_overlay")
+                "optim_study")

@@ -712,6 +712,24 @@ body.dark .optim-canvas{border-color:#2a323c}
       <h2>Past studies</h2>
       <table class="optim-jobs" id="optimHistory"></table>
     </div>
+
+    <div class="card">
+      <h2>Assistant <span class="hint">a local, offline model that works only
+        through the optimizer's own tools</span></h2>
+      <p class="hint" id="agentHint"></p>
+      <div class="run-tools">
+        <button id="btnAgentModel" class="ghost">Pick model (GGUF)&hellip;</button>
+        <label class="hint">GPU layers <input type="number" id="agentGpu" value="0" min="-1" max="200" step="1" style="width:70px"
+          title="-1 = all layers on the GPU (needs the CUDA build of llama-cpp-python); 0 = CPU"></label>
+        <button id="btnAgentReset" class="ghost">New conversation</button>
+        <button id="btnAgentStop" class="ghost" style="display:none">Stop</button>
+      </div>
+      <pre id="agentLog" class="hint" style="white-space:pre-wrap;max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:8px;min-height:60px"></pre>
+      <div class="row">
+        <input type="text" id="agentInput" placeholder="e.g. inspect the log I picked, check the units, and propose three windows" style="flex:1">
+        <button id="btnAgentSend" class="run-ms">Send</button>
+      </div>
+    </div>
   </section>
 </main>
 

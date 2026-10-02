@@ -470,10 +470,65 @@ function optimRenderHistory(list) {
   });
 }
 
+/* ---------------------------------------------------------- assistant -- */
+
+const A = { poll: null, state: null };
+
+function agentRender(st) {
+  const el = $("#agentLog"); if (!el) return;
+  const lines = (st.transcript || []).map(e => {
+    const tag = { user: "you", assistant: "assistant", tool: "→ tool", result: "← result", system: "·" }[e.role] || e.role;
+    return `[${e.when}] ${tag}: ${e.text}`;
+  });
+  el.textContent = lines.join("\n") || "No conversation yet.";
+  el.scrollTop = el.scrollHeight;
+  $("#btnAgentStop").style.display = st.busy ? "" : "none";
+  $("#btnAgentSend").disabled = !!st.busy;
+}
+
+async function agentLoad() {
+  if (!window.pywebview) return;
+  const st = await pywebview.api.agent_state();
+  if (!st.ok) { $("#agentHint").textContent = "Assistant unavailable: " + st.error; return; }
+  A.state = st;
+  $("#agentGpu").value = st.gpu_layers;
+  $("#agentHint").textContent = !st.runtime
+    ? "llama-cpp-python is not installed in this environment; the assistant cannot run a model."
+    : !st.model_ok ? "No model file yet — pick a GGUF (e.g. a 7B instruct model, Q4) to enable the assistant. " + st.runtime + "."
+    : `Model: ${st.model_name} (${st.loaded ? "loaded" : "loads on first message"}), ${st.runtime}, ` +
+      `${st.gpu_layers < 0 ? "all layers on GPU" : (st.gpu_layers ? st.gpu_layers + " GPU layers" : "CPU")}, context ${st.ctx}.`;
+  agentRender(st);
+  if (st.busy && !A.poll) A.poll = setInterval(agentTick, 2000);
+}
+
+async function agentTick() {
+  const st = await pywebview.api.agent_tail();
+  if (!st.ok) return;
+  agentRender(st);
+  if (!st.busy) { clearInterval(A.poll); A.poll = null; optimTick(); }
+}
+
+async function agentSend() {
+  const inp = $("#agentInput");
+  const text = inp.value.trim(); if (!text) return;
+  const res = await pywebview.api.agent_send(text);
+  if (!res.ok) { $("#agentHint").textContent = "Not sent: " + res.error; return; }
+  inp.value = "";
+  if (A.poll) clearInterval(A.poll);
+  A.poll = setInterval(agentTick, 2000);
+  agentTick();
+}
+
 /* ------------------------------------------------------------- wiring -- */
 
 document.addEventListener("DOMContentLoaded", () => {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("#btnAgentModel", async () => { await pywebview.api.agent_pick_model(); agentLoad(); });
+  on("#btnAgentReset", async () => { await pywebview.api.agent_reset(); agentLoad(); });
+  on("#btnAgentStop", async () => { await pywebview.api.agent_stop(); });
+  on("#btnAgentSend", agentSend);
+  const ai = $("#agentInput"); if (ai) ai.onkeydown = (e) => { if (e.key === "Enter") agentSend(); };
+  const ag = $("#agentGpu"); if (ag) ag.onchange = async () => { await pywebview.api.agent_set("llm_gpu_layers", parseInt(ag.value, 10)); agentLoad(); };
   on("#btnOptimPick", optimPickLog);
   on("#btnOptimSaveMap", optimSaveMap);
   on("#btnOptimFind", optimFind);
@@ -488,4 +543,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("resize", () => { optimDrawTrace(); });
 });
-window.optimizerOnEnter = optimLoad;
+window.optimizerOnEnter = () => { optimLoad(); agentLoad(); };
