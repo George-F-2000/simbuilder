@@ -1,9 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/assets/mf4viewer.ico', '.'), ('../CSV to MDF Converter/plt-to-mf4-app/assets/plttomf4.ico', '.'), ('web', 'web'), ('cycles', 'cycles'), ('dq_targets.json', '.')]
+datas = [('assets/pipeline.ico', '.'), ('../CSV to MDF Converter/mf4-viewer-app/assets/mf4viewer.ico', '.'), ('../CSV to MDF Converter/plt-to-mf4-app/assets/plttomf4.ico', '.'), ('web', 'web'), ('cycles', 'cycles'), ('dq_targets.json', '.'),
+         # plant repairs + the default custom split map are imported by path at run time
+         ('rl_gym/plant_repairs.py', 'rl_gym'), ('rl_gym/deck_patches.py', 'rl_gym'), ('rl_gym/knee_george_ems.mat', 'rl_gym'),
+         ('deck_hook_example.py', '.')]
 binaries = []
-hiddenimports = ['viewer', 'plt_gui', 'ems_builder', 'motor_gen', 'fmu_inject', 'drive_cycles', 'drive_import', 'results', 'live_tail', 'drive_quality', 'pedal_map', 'perf_event', 'calibration', 'rl_gym_bridge']
+hiddenimports = ['viewer', 'plt_gui', 'ems_builder', 'motor_gen', 'fmu_inject', 'drive_cycles', 'drive_import', 'results', 'live_tail', 'drive_quality', 'pedal_map', 'perf_event', 'calibration', 'rl_gym_bridge',
+                 'optimizer', 'optimizer.api', 'optimizer.logmatch', 'optimizer.replay', 'optimizer.plant', 'optimizer.study', 'live_procs']
 tmp_ret = collect_all('tkinterdnd2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 # Explicitly bundle matplotlib (mpl-data fonts/backends/matplotlibrc) so the
@@ -25,7 +29,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['PyQt5', 'PySide6', 'PyQt6', 'PySide2', 'torch', 'stable_baselines3', 'gymnasium', 'plotly'],
+    excludes=['PyQt5', 'PySide6', 'PyQt6', 'PySide2', 'torch', 'stable_baselines3', 'gymnasium', 'plotly', 'llama_cpp'],
     noarchive=False,
     optimize=0,
 )

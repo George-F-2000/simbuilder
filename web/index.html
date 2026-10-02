@@ -11,6 +11,27 @@
 .knob-hint{display:block;font-weight:400;margin:2px 0 0 2px;max-width:640px}
 .calib-better{color:#1e7e34;font-weight:700}
 .calib-worse{color:#c0392b;font-weight:700}
+/* Optimizer tab */
+.optim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 18px}
+.optim-map{width:100%;border-collapse:collapse;font-size:12px}
+.optim-map th,.optim-map td{text-align:left;padding:4px 6px;border-top:1px solid var(--line)}
+.optim-map select,.optim-map input{max-width:100%}
+.optim-map .req{color:#c0392b}
+.optim-win{display:flex;gap:10px;align-items:center;padding:4px 0;border-top:1px solid var(--line);font-size:12px}
+.optim-win .tag{color:var(--muted)}
+.optim-jobs{width:100%;border-collapse:collapse;font-size:12px}
+.optim-jobs th,.optim-jobs td{padding:4px 6px;border-top:1px solid var(--line);text-align:left;vertical-align:middle}
+.optim-jobs tr.best td{font-weight:700}
+.optim-jobs .progress-track{width:120px;display:inline-block;vertical-align:middle;margin:0 6px 0 0}
+.optim-status{display:flex;flex-wrap:wrap;gap:12px 28px;margin:6px 0 10px}
+.optim-status .vtile{min-width:120px}
+.optim-canvas{width:100%;height:220px;border:1px solid var(--line);border-radius:6px}
+#optimOverlay{height:520px}
+.optim-adv{margin-top:8px}
+.optim-adv summary{cursor:pointer;color:var(--muted);font-size:12px}
+.optim-param{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:6px 10px;align-items:center;margin:6px 0}
+.optim-param input[type=number]{width:80px}
+body.dark .optim-canvas{border-color:#2a323c}
 </style>
 </head>
 <body>
@@ -27,6 +48,7 @@
     <button class="tab" data-tab="live">Live</button>
     <button class="tab" data-tab="calib">Calibration</button>
     <button class="tab" data-tab="gym">RL Gym</button>
+    <button class="tab" data-tab="optimizer">Optimizer</button>
   </nav>
   <div class="header-actions">
     <button id="btnTheme" class="ghost" title="Toggle dark mode">🌙</button>
@@ -568,6 +590,131 @@
 </main>
 
 
+<main id="tab-optimizer" class="hidden">
+  <section class="res-full">
+    <div class="card">
+      <h2>Optimizer <span class="hint">fit the model's road load to a real-vehicle
+        log &mdash; the car's own pedal and brake drive the model</span></h2>
+      <p class="hint" id="optimHint"></p>
+      <p class="hint"><b>How this works:</b> pick a logged drive and tell the
+        optimizer which channels are speed, pedal, brake, torque and power
+        (saved for next time). It cuts the log into replay windows, drives the
+        model open-loop with the logged pedal and brake from each window's
+        speed, and tunes two scales &mdash; tyre rolling resistance and aero
+        drag &mdash; so the model's speed, torque and power curves land on the
+        car's. Candidates run in parallel (one solver each); the fit is a
+        grid plus a quadratic response surface. Physics stays locked: masses,
+        inertias, compliances, motor maps and controller tables are never
+        touched. The tuned model exports as a complete deck with its tyre and
+        aero files.</p>
+      <p class="hint" id="optimSetup"></p>
+    </div>
+
+    <div class="card">
+      <h2>1 &middot; Real log <span class="hint">an MF4 from the car; channel
+        names are yours, map them once</span></h2>
+      <div class="run-tools">
+        <button id="btnOptimPick" class="ghost">Pick log (MF4)&hellip;</button>
+        <span id="optimLogName" class="hint"></span>
+      </div>
+      <table class="optim-map" id="optimMap"></table>
+      <div class="run-tools">
+        <button id="btnOptimSaveMap" class="ghost" disabled>Save mapping</button>
+        <span id="optimMapHint" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 &middot; Windows <span class="hint">moving stretches of the log to
+        replay; several short windows beat one long one</span></h2>
+      <div class="row">
+        <label>min length <input type="number" id="optimWinMin" value="20" min="5" step="5"> s</label>
+        <label>max length <input type="number" id="optimWinMax" value="90" min="10" step="10"> s</label>
+        <label>speed floor <input type="number" id="optimWinFloor" value="3" min="0" step="1"> km/h</label>
+        <label><input type="checkbox" id="optimWinBrakeFree"> brake-free only</label>
+        <button id="btnOptimFind" class="ghost" disabled>Find windows</button>
+      </div>
+      <canvas id="optimTrace" class="optim-canvas"></canvas>
+      <div id="optimWindows"></div>
+      <div class="row">
+        <label>manual <input type="number" id="optimManT0" placeholder="t0 s" step="1" style="width:90px">
+          &ndash; <input type="number" id="optimManT1" placeholder="t1 s" step="1" style="width:90px"></label>
+        <button id="btnOptimAddWin" class="ghost" disabled>Add window</button>
+        <span id="optimWinHint" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 &middot; Study <span class="hint">what to tune, what to match, how
+        hard to search</span></h2>
+      <div id="optimParams"></div>
+      <div class="optim-grid">
+        <div>
+          <p class="hint"><b>Match weights</b> (normalised RMSE per signal; 0 = report only)</p>
+          <div id="optimWeights"></div>
+        </div>
+        <div>
+          <p class="hint"><b>Search</b></p>
+          <label class="calib-knob">grid per round <input type="number" id="optimGrid" value="3" min="2" max="5" step="1"></label>
+          <label class="calib-knob">rounds <input type="number" id="optimRounds" value="2" min="1" max="4" step="1"></label>
+          <label class="calib-knob">parallel solvers <input type="number" id="optimWorkers" value="6" min="1" max="12" step="1"></label>
+        </div>
+      </div>
+      <details class="optim-adv">
+        <summary>Advanced: replay step, integrator, alignment, pedal mode</summary>
+        <div class="optim-grid">
+          <label class="calib-knob">pedal step <input type="number" id="optimStep" value="1.0" min="0.2" max="5" step="0.1"> s
+            <span class="hint knob-hint">length of each constant throttle/brake maneuver</span></label>
+          <label class="calib-knob">h_max <input type="number" id="optimHmax" value="0.01" min="0.001" max="0.05" step="0.001"> s
+            <span class="hint knob-hint">integrator step cap per maneuver</span></label>
+          <label class="calib-knob">settle <input type="number" id="optimSettle" value="3" min="0" max="20" step="0.5"> s
+            <span class="hint knob-hint">seconds at the window start left out of the score</span></label>
+          <label class="calib-knob">max lag <input type="number" id="optimLag" value="2" min="0" max="10" step="0.5"> s
+            <span class="hint knob-hint">alignment search range (correlation on speed)</span></label>
+          <label class="calib-knob">pedal mode
+            <select id="optimPedalMode">
+              <option value="physical" selected>physical (car's law in the deck)</option>
+              <option value="mapped">mapped (pedal_map.real_to_model)</option>
+            </select>
+            <span class="hint knob-hint">physical: the logged pedal is the deck's throttle input as is</span></label>
+          <label class="calib-knob">study name <input type="text" id="optimName" value="roadload"></label>
+        </div>
+      </details>
+      <div class="run-tools">
+        <button id="btnOptimStart" class="run-ms" disabled>&#9654; Start study</button>
+        <button id="btnOptimStop" class="stop-ms" style="display:none">&#9632; Stop</button>
+        <span id="optimStartHint" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Progress <span class="hint">one row per candidate; each window is one
+        solver</span></h2>
+      <div class="optim-status" id="optimStatus"></div>
+      <table class="optim-jobs" id="optimJobs"></table>
+      <p class="hint" id="optimSurface"></p>
+    </div>
+
+    <div class="card">
+      <h2>Result <span class="hint">the tuned model: deck + tyre + aero, report
+        and overlay</span></h2>
+      <div class="run-tools">
+        <button id="btnOptimExport" class="ghost" disabled>Export tuned model</button>
+        <label class="hint"><input type="checkbox" id="optimRedact"> redacted figure</label>
+        <button id="btnOptimOpenBest" class="ghost" disabled>Open best folder</button>
+        <label class="hint">overlay window <select id="optimOverlayWin"></select></label>
+        <span id="optimExportInfo" class="hint"></span>
+      </div>
+      <canvas id="optimOverlay" class="optim-canvas"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Past studies</h2>
+      <table class="optim-jobs" id="optimHistory"></table>
+    </div>
+  </section>
+</main>
+
 <main id="tab-results" class="hidden">
   <section class="res-full">
     <div class="subtabs" id="resSubtabs">
@@ -796,5 +943,6 @@
 <script src="calib.js"></script>
 <script src="gym.js"></script>
 <script src="live.js"></script>
+<script src="optimizer.js"></script>
 </body>
 </html>

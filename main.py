@@ -682,7 +682,12 @@ class Api:
             self.running = False
 
     def stop_run(self):
-        """Kill the solver process tree. The worker thread then unwinds."""
+        """Kill the solver process tree. The worker thread then unwinds.
+        While an optimizer study holds the running flag, Stop stops the
+        study (all of its solvers) instead."""
+        opt = getattr(self, "_optim", None)
+        if opt is not None and opt.study is not None and opt.study.is_running():
+            return opt.optim_stop()
         if not self.running:
             return {"ok": False}
         self.stop_requested = True
@@ -778,6 +783,60 @@ class Api:
         if not files:
             return {"reports": [], "error": "no MF4 files in that folder"}
         return {"reports": [self._dq_report(p) for p in files]}
+
+    # ---- Optimizer tab -------------------------------------------------------
+    # Road-load fit against a real log (optimizer/). The study runs its own
+    # solver pool and holds self.running while it does; every optim_* method
+    # here forwards to optimizer.api.OptimizerApi, which is also the complete
+    # tool list of the local agent.
+
+    def _optim_api(self):
+        if getattr(self, "_optim", None) is None:
+            from optimizer.api import OptimizerApi
+            self._optim = OptimizerApi(self)
+        return self._optim
+
+    def optim_state(self):
+        return self._optim_api().optim_state()
+
+    def optim_pick_log(self):
+        return self._optim_api().optim_pick_log()
+
+    def optim_inspect_log(self, path):
+        return self._optim_api().optim_inspect_log(path)
+
+    def optim_save_map(self, path, cmap):
+        return self._optim_api().optim_save_map(path, cmap)
+
+    def optim_find_windows(self, path, cmap, opts=None):
+        return self._optim_api().optim_find_windows(path, cmap, opts)
+
+    def optim_start(self, config):
+        return self._optim_api().optim_start(config)
+
+    def optim_status(self):
+        return self._optim_api().optim_status()
+
+    def optim_stop(self):
+        return self._optim_api().optim_stop()
+
+    def optim_export(self, study_dir=None, redact=False):
+        return self._optim_api().optim_export(study_dir, redact)
+
+    def optim_history(self):
+        return self._optim_api().optim_history()
+
+    def optim_study(self, study_dir):
+        return self._optim_api().optim_study(study_dir)
+
+    def optim_overlay(self, study_dir=None, window=0):
+        return self._optim_api().optim_overlay(study_dir, window)
+
+    def optim_open(self, path):
+        return self._optim_api().optim_open(path)
+
+    def optim_set_dir(self):
+        return self._optim_api().optim_set_dir()
 
     def open_viewer_app(self):
         subprocess.Popen(self_command("--viewer"))

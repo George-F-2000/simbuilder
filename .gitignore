@@ -19,3 +19,14 @@ rl_gym/gym_history.json
 MODEL_BIBLE.md
 ENGINEERING_NOTES.md
 CAMPAIGN.md
+
+# machine-local plant edits, channel mappings, pedal anchors - never project code
+*.local.py
+*.local.json
+
+# optimizer scratch
+tests/_tmp/
+.pytest_cache/
+
+# editor/assistant local config
+.claude/

@@ -455,13 +455,22 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
             if ems0.get("enabled") else "deck default (builder off)"))
         log("  =========================================")
 
+    # The substitution COUNT is checked: a deck without a .tir/.aae reference
+    # (or one whose references patch_deck could not normalise) would otherwise
+    # accept the override silently and run on the deck default - fatal for a
+    # calibration study that believes it changed the plant.
     tire = vehicle.get("tire_path")
     if tire:
         if os.path.isfile(tire):
-            deck_text = re.sub(
+            deck_text, n_tir = re.subn(
                 r'(?:[A-Za-z]:/|(?:\.\./)+)[^";\r\n]+?\.tir',
                 tire.replace("\\", "/"), deck_text, flags=re.IGNORECASE)
-            log("  vehicle: tire file -> " + os.path.basename(tire))
+            if n_tir:
+                log("  vehicle: tire file -> {} ({} reference{})".format(
+                    os.path.basename(tire), n_tir, "" if n_tir == 1 else "s"))
+            else:
+                log("  WARNING: tire override given but the deck has no .tir "
+                    "reference to re-point - deck default kept")
         else:
             log("  WARNING: tire override not found, using deck default: " + tire)
 
@@ -471,10 +480,15 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
     aero = vehicle.get("aero_path")
     if aero:
         if os.path.isfile(aero):
-            deck_text = re.sub(
+            deck_text, n_aae = re.subn(
                 r'(?:[A-Za-z]:/|(?:\.\./)+)[^";\r\n]+?\.aae',
                 aero.replace("\\", "/"), deck_text, flags=re.IGNORECASE)
-            log("  vehicle: aero file -> " + os.path.basename(aero))
+            if n_aae:
+                log("  vehicle: aero file -> {} ({} reference{})".format(
+                    os.path.basename(aero), n_aae, "" if n_aae == 1 else "s"))
+            else:
+                log("  WARNING: aero override given but the deck has no .aae "
+                    "reference to re-point - deck default kept")
         else:
             log("  WARNING: aero override not found, using deck default: "
                 + aero)
@@ -530,6 +544,63 @@ def apply_vehicle(vehicle, deck_text, source_dir, run_dir, log):
                   encoding="utf-8") as fh:
             json.dump(spec, fh, indent=2)
         log("  vehicle spec recorded: vehicle.json")
+    return deck_text
+
+
+def _load_deck_hook(path):
+    """Import a deck-hook module from a file path (not from sys.path, so hooks
+    can live anywhere and never shadow app modules)."""
+    import importlib.util
+    mod_name = "deck_hook_" + re.sub(
+        r"\W", "_", os.path.splitext(os.path.basename(path))[0])
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError("cannot load deck hook " + path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not hasattr(mod, "apply"):
+        raise AttributeError("deck hook {} has no apply() function".format(path))
+    return mod
+
+
+def apply_deck_hooks(settings, deck_text, run_dir, vehicle, log):
+    """User-supplied deck patches, applied after every built-in override and
+    before the XML is written.
+
+    settings "deck_hooks" (and, per run, vehicle["deck_hooks"]) list .py files
+    - local, machine-specific, kept OUT of the repository (*.local.py is
+    gitignored; see deck_hook_example.py for the contract). Each exposes
+
+        apply(deck_text, *, run_dir, settings, vehicle, log) -> (deck_text, counts)
+
+    where `counts` is a dict of what was changed (asserted by the hook itself,
+    the way plant_repairs.apply_all reports its counts). A hook may read its
+    own parameters from vehicle.get("hook_params", {}). Hooks run inside
+    worker threads (several runs may be prepared at once), so they must not
+    touch shared state. A failing hook is logged and skipped - it never stops
+    a run, mirroring the plant-repairs policy."""
+    hooks = settings.get("deck_hooks") or []
+    if isinstance(hooks, str):
+        hooks = [hooks]
+    extra = (vehicle or {}).get("deck_hooks") or []
+    if isinstance(extra, str):
+        extra = [extra]
+    for hp in list(hooks) + list(extra):
+        try:
+            if not os.path.isfile(hp):
+                raise FileNotFoundError(hp)
+            mod = _load_deck_hook(hp)
+            deck_text, counts = mod.apply(deck_text, run_dir=run_dir,
+                                          settings=settings, vehicle=vehicle,
+                                          log=log)
+            if isinstance(counts, dict):
+                desc = ", ".join("{} x{}".format(k, v) for k, v in counts.items())
+            else:
+                desc = str(counts)
+            log("  deck hook {}: {}".format(os.path.basename(hp), desc or "applied"))
+        except Exception as exc:   # never let a hook stop a run
+            log("  deck hook {} NOT applied: {}: {}".format(
+                os.path.basename(str(hp)), type(exc).__name__, exc))
     return deck_text
 
 
@@ -609,6 +680,7 @@ def prepare_run(settings, scenario_name, adf_text, log, vehicle=None,
     deck_text = patch_deck(deck_text, source_dir, run_dir, log)
     deck_text = neutralize_gui_usersubs(deck_text, log)
     deck_text = apply_vehicle(vehicle, deck_text, source_dir, run_dir, log)
+    deck_text = apply_deck_hooks(settings, deck_text, run_dir, vehicle, log)
     deck_text = xml_escape_amps(deck_text, log)   # never ship malformed XML
 
     deck_name = stem + ".xml"
@@ -766,6 +838,7 @@ def deck_info(settings):
     info["fmus"] = names(".fmu")
     info["mats"] = names(".mat")
     info["tires"] = names(".tir")
+    info["aeros"] = names(".aae")
     return info
 
 
